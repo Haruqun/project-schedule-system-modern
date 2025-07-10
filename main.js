@@ -6,11 +6,22 @@ let isInitialLoad = true;
 
 // メイン処理
 document.addEventListener("DOMContentLoaded", function () {
+  // 初期開始日を設定（今日から次の水曜日）
+  const today = new Date();
+  const nextWednesday = new Date(today);
+  const dayOfWeek = today.getDay();
+  const daysUntilWednesday = (3 - dayOfWeek + 7) % 7 || 7; // 水曜日は3
+  nextWednesday.setDate(today.getDate() + daysUntilWednesday);
+  document.getElementById('projectStartDate').value = nextWednesday.toISOString().split('T')[0];
+  
   // プロジェクトデータを初期化（テキストエリアから読み込み）
   updateProjectData();
   
   // 初期データの計算
   calculateInitialStats();
+  
+  // 初期日付を設定
+  updateScheduleDates();
   
   // スケジュール達成可能性をチェック
   checkScheduleFeasibility();
@@ -271,17 +282,17 @@ function displaySchedule() {
         <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 20px;">
             <div>
                 <div style="font-size: 12px; color: #6c757d;">開始</div>
-                <div style="font-weight: bold; color: #1976d2;">2025/07/16</div>
+                <div style="font-weight: bold; color: #1976d2;">${scheduleData.projectInfo?.startDate || '-'}</div>
             </div>
             <div style="font-size: 24px; color: #9c27b0;">→</div>
             <div>
                 <div style="font-size: 12px; color: #6c757d;">納期</div>
-                <div style="font-weight: bold; color: #388e3c;">2025/11/03</div>
+                <div style="font-weight: bold; color: #388e3c;">${scheduleData.projectInfo?.deadline || '-'}</div>
             </div>
             <div style="font-size: 24px; color: #9c27b0;">→</div>
             <div>
                 <div style="font-size: 12px; color: #6c757d;">完了</div>
-                <div style="font-weight: bold; color: #7b1fa2;">2025/11/12</div>
+                <div style="font-weight: bold; color: #7b1fa2;">${scheduleData.projectInfo?.endDate || '-'}</div>
             </div>
         </div>
     `;
@@ -326,6 +337,127 @@ function displaySchedule() {
   finalStats.appendChild(statsContent);
 
   container.appendChild(finalStats);
+}
+
+// タスク数を平準化するページ配分最適化関数
+function optimizePageDistribution(totalPages, totalWeeks, firstWeekPages, tasksPerPage) {
+    const TARGET_MIN = 15; // 目標最小タスク数
+    const TARGET_MAX = 20; // 目標最大タスク数
+    const weeksPerPageCompletion = 9;
+    
+    // シミュレーションベースの最適化
+    let bestDistribution = new Array(totalWeeks).fill(0);
+    bestDistribution[0] = firstWeekPages;
+    let bestVariance = Infinity;
+    
+    // 複数のパターンを試行
+    for (let attempt = 0; attempt < 50; attempt++) {
+        let distribution = new Array(totalWeeks).fill(0);
+        distribution[0] = firstWeekPages;
+        let remaining = totalPages - firstWeekPages;
+        
+        // ランダムに配分（ただし制約を考慮）
+        const maxStartWeek = Math.min(totalWeeks - weeksPerPageCompletion, 10);
+        
+        // 台形型の配分を試みる
+        let weekWeights = [];
+        if (attempt < 25) {
+            // 前半は台形型パターン
+            for (let i = 1; i <= maxStartWeek; i++) {
+                if (i <= 3) weekWeights.push(2 + Math.random());
+                else if (i <= 7) weekWeights.push(3 + Math.random());
+                else weekWeights.push(1 + Math.random());
+            }
+        } else {
+            // 後半はより均等な配分
+            for (let i = 1; i <= maxStartWeek; i++) {
+                weekWeights.push(2 + Math.random() * 2);
+            }
+        }
+        
+        // 重みを正規化して配分
+        const totalWeight = weekWeights.reduce((sum, w) => sum + w, 0);
+        for (let i = 0; i < weekWeights.length && i + 1 < totalWeeks; i++) {
+            const pages = Math.round(remaining * weekWeights[i] / totalWeight);
+            distribution[i + 1] = Math.min(pages, remaining);
+            remaining -= distribution[i + 1];
+        }
+        
+        // 残りを配分
+        for (let i = 1; i < maxStartWeek && remaining > 0; i++) {
+            if (distribution[i] < 4) {
+                distribution[i]++;
+                remaining--;
+            }
+        }
+        
+        // このパターンでタスク数をシミュレート
+        const weeklyTasks = simulateWeeklyTasks(distribution, totalWeeks, tasksPerPage);
+        const variance = calculateVariance(weeklyTasks);
+        const maxTask = Math.max(...weeklyTasks);
+        const minTask = Math.min(...weeklyTasks.filter(t => t > 0));
+        
+        // 評価（分散が小さく、かつ目標範囲内に収まるものを優先）
+        let score = variance;
+        if (maxTask > TARGET_MAX) score += (maxTask - TARGET_MAX) * 10;
+        if (minTask < TARGET_MIN && minTask > 0) score += (TARGET_MIN - minTask) * 5;
+        
+        if (score < bestVariance) {
+            bestVariance = score;
+            bestDistribution = [...distribution];
+        }
+    }
+    
+    return bestDistribution;
+}
+
+// 週次タスク数をシミュレート
+function simulateWeeklyTasks(pagesPerWeek, totalWeeks, tasksPerPage) {
+    const weeklyTasks = new Array(totalWeeks).fill(0);
+    const pageStates = [];
+    
+    // ページの初期化
+    for (let week = 0; week < totalWeeks; week++) {
+        for (let i = 0; i < pagesPerWeek[week]; i++) {
+            pageStates.push({
+                startWeek: week,
+                currentStage: 0,
+                lastAction: week
+            });
+        }
+    }
+    
+    // 各週のタスクを計算
+    for (let week = 0; week < totalWeeks; week++) {
+        pageStates.forEach(page => {
+            if (page.currentStage >= tasksPerPage) return;
+            
+            const weeksSinceAction = week - page.lastAction;
+            
+            // 新規開始または進行中のタスク
+            if (week === page.startWeek || weeksSinceAction === 1) {
+                weeklyTasks[week] += 2; // メインタスク + 修正依頼
+                page.currentStage += 2;
+                page.lastAction = week;
+            } else if (weeksSinceAction >= 2) {
+                weeklyTasks[week] += 2;
+                page.currentStage += 2;
+                page.lastAction = week;
+            }
+        });
+    }
+    
+    return weeklyTasks;
+}
+
+// 分散を計算
+function calculateVariance(values) {
+    const validValues = values.filter(v => v > 0);
+    if (validValues.length === 0) return 0;
+    
+    const mean = validValues.reduce((sum, v) => sum + v, 0) / validValues.length;
+    const variance = validValues.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / validValues.length;
+    return Math.sqrt(variance); // 標準偏差
 }
 
 // ミーティングデータを生成
@@ -1235,6 +1367,112 @@ function updateProjectOverview(pageCount, taskCount) {
             `;
     }
   }
+}
+
+// プロジェクト開始日の変更処理
+function onStartDateChange() {
+  const startDateInput = document.getElementById('projectStartDate');
+  const meetingDaySelect = document.getElementById('meetingDay');
+  const selectedDate = new Date(startDateInput.value);
+  const meetingDay = parseInt(meetingDaySelect.value);
+  
+  // 選択された日付の曜日を取得
+  const selectedDay = selectedDate.getDay();
+  
+  // ミーティング曜日に合わせて日付を調整
+  if (selectedDay !== meetingDay) {
+    // 次のミーティング曜日まで進める
+    const daysToAdd = (meetingDay - selectedDay + 7) % 7 || 7;
+    selectedDate.setDate(selectedDate.getDate() + daysToAdd);
+    startDateInput.value = selectedDate.toISOString().split('T')[0];
+  }
+  
+  // スケジュールデータを更新
+  updateScheduleDates();
+  
+  // 通知を表示
+  const dateStr = formatDate(selectedDate);
+  showSuccessMessage(`📅 プロジェクト開始日を${dateStr}に設定しました`);
+}
+
+// スケジュールの日付を更新
+function updateScheduleDates() {
+  const startDateInput = document.getElementById('projectStartDate');
+  const startDate = new Date(startDateInput.value);
+  const projectWeeks = parseInt(document.getElementById('projectWeeks').value) || 18;
+  
+  // 週次タスクの日付を更新
+  scheduleData.weeklyTasks = scheduleData.weeklyTasks || [];
+  for (let i = 0; i < projectWeeks; i++) {
+    const weekDate = new Date(startDate);
+    weekDate.setDate(startDate.getDate() + i * 7);
+    
+    if (scheduleData.weeklyTasks[i]) {
+      scheduleData.weeklyTasks[i].date = formatDate(weekDate);
+    } else {
+      scheduleData.weeklyTasks.push({
+        week: i + 1,
+        tasks: 0,
+        meeting: `第${i + 1}回`,
+        date: formatDate(weekDate)
+      });
+    }
+  }
+  
+  // プロジェクト情報を更新
+  scheduleData.projectInfo = scheduleData.projectInfo || {};
+  scheduleData.projectInfo.startDate = formatDate(startDate);
+  
+  // 終了日を計算
+  const endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + (projectWeeks - 1) * 7);
+  scheduleData.projectInfo.endDate = formatDate(endDate);
+  
+  // 納期を計算（終了日の前の月曜日）
+  const deadline = new Date(endDate);
+  const dayOfWeek = deadline.getDay();
+  if (dayOfWeek !== 1) { // 月曜日でない場合
+    const daysToMonday = (1 - dayOfWeek + 7) % 7 || 7;
+    deadline.setDate(deadline.getDate() - (7 - daysToMonday));
+  }
+  scheduleData.projectInfo.deadline = formatDate(deadline);
+  
+  // 概要セクションの日付を更新
+  const startDateElement = document.getElementById('project-start-date');
+  const deadlineElement = document.getElementById('project-deadline');
+  const endDateElement = document.getElementById('project-end-date');
+  const durationElement = document.getElementById('project-duration');
+  
+  if (startDateElement) startDateElement.textContent = formatDate(startDate);
+  if (deadlineElement) deadlineElement.textContent = formatDate(deadline);
+  if (endDateElement) endDateElement.textContent = formatDate(endDate);
+  if (durationElement) durationElement.textContent = projectWeeks;
+  
+  // UIを更新
+  drawTaskChart();
+  const container = document.getElementById("schedule-container");
+  container.innerHTML = "";
+  displaySchedule();
+  updateStats();
+}
+
+// タスク平準化モードの変更処理
+function onSmoothModeChange() {
+  const smoothMode = document.getElementById('smoothMode').checked;
+  
+  // スケジュールを再生成
+  drawTaskChart();
+  const container = document.getElementById("schedule-container");
+  container.innerHTML = "";
+  displaySchedule();
+  updateStats();
+  
+  // 通知を表示
+  const message = smoothMode 
+    ? "✅ タスク平準化モードを有効にしました<br>週次タスクが15-20件に調整されます"
+    : "⚠️ タスク平準化モードを無効にしました<br>従来のスケジュールパターンを使用します";
+    
+  showSuccessMessage(message);
 }
 
 // 第1週変更時のメッセージ表示
