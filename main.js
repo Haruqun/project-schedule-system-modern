@@ -12,20 +12,22 @@ document.addEventListener("DOMContentLoaded", function () {
   const dayOfWeek = today.getDay();
   const daysUntilWednesday = (3 - dayOfWeek + 7) % 7 || 7; // 水曜日は3
   nextWednesday.setDate(today.getDate() + daysUntilWednesday);
-  document.getElementById('projectStartDate').value = nextWednesday.toISOString().split('T')[0];
-  
+  document.getElementById("projectStartDate").value = nextWednesday
+    .toISOString()
+    .split("T")[0];
+
   // プロジェクトデータを初期化（テキストエリアから読み込み）
   updateProjectData();
-  
+
   // 初期データの計算
   calculateInitialStats();
-  
+
   // 初期日付を設定
   updateScheduleDates();
-  
+
   // スケジュール達成可能性をチェック
   checkScheduleFeasibility();
-  
+
   // グラフの描画
   drawTaskChart();
 
@@ -34,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // 統計情報の初期表示
   updateStats();
-  
+
   // 初期ロード完了
   isInitialLoad = false;
 });
@@ -47,14 +49,14 @@ function calculateInitialStats() {
   const pages = scheduleData.pages || [];
   const taskCycle = scheduleData.taskCycle || [];
   const projectWeeks = scheduleData.projectWeeks || 18;
-  
+
   // 総タスク数
   const totalTasks = pages.length * taskCycle.length;
-  
+
   // ecbeing側とクライアント側のタスク数を計算
   let devTasks = 0;
   let clientTasks = 0;
-  
+
   taskCycle.forEach((task) => {
     const taskType = getTaskType(task);
     if (taskType === "dev") {
@@ -66,20 +68,23 @@ function calculateInitialStats() {
       clientTasks += pages.length;
     }
   });
-  
+
   // 値を更新
   document.getElementById("total-dev-tasks").textContent = devTasks;
   document.getElementById("total-client-tasks").textContent = clientTasks;
-  
+
   // プロジェクト概要の更新
   document.getElementById("overview-page-count").textContent = pages.length;
   document.getElementById("overview-total-tasks").textContent = totalTasks;
   document.getElementById("overview-week-count").textContent = projectWeeks;
-  
+
   // 統計カードの更新
-  document.querySelector(".stat-card:nth-child(1) .stat-value").textContent = pages.length;
-  document.querySelector(".stat-card:nth-child(2) .stat-value").textContent = projectWeeks;
-  document.querySelector(".stat-card:nth-child(3) .stat-value").textContent = totalTasks;
+  document.querySelector(".stat-card:nth-child(1) .stat-value").textContent =
+    pages.length;
+  document.querySelector(".stat-card:nth-child(2) .stat-value").textContent =
+    projectWeeks;
+  document.querySelector(".stat-card:nth-child(3) .stat-value").textContent =
+    totalTasks;
 }
 
 // 週次タスク量推移グラフの描画
@@ -207,95 +212,103 @@ function displaySchedule() {
   const lastMeeting = meetings[meetings.length - 1];
   const finalCompleted = lastMeeting.progress.completed;
   const finalInProgress = lastMeeting.progress.inProgress;
-  const finalTotal = finalCompleted + finalInProgress + lastMeeting.progress.notStarted;
+  const finalTotal =
+    finalCompleted + finalInProgress + lastMeeting.progress.notStarted;
   const finalCompletionRate = Math.round((finalCompleted / finalTotal) * 100);
 
   const finalStats = document.createElement("div");
   finalStats.className = "meeting-section";
   finalStats.style.cssText = `
-        margin-top: 40px;
-        border: none;
-        border-radius: 12px;
-        overflow: hidden;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    `;
+            margin-top: 40px;
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        `;
 
   const statsHeader = document.createElement("div");
   statsHeader.style.cssText = `
-        padding: 25px;
-        color: white;
-        font-size: 24px;
-        font-weight: bold;
-        text-align: center;
-    `;
+            padding: 25px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        `;
   statsHeader.innerHTML = "🎉 プロジェクト完了サマリー";
 
   const statsContent = document.createElement("div");
   statsContent.style.cssText = `
-        background: white;
-        padding: 30px;
-    `;
+            background: white;
+            padding: 30px;
+        `;
 
   const statsGrid = document.createElement("div");
   statsGrid.style.cssText = `
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-    `;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        `;
 
   // 納期達成状況を判定
-  const isDeadlineAchieved = finalCompletionRate === 100 && finalInProgress === 0;
-  const deadlineStatus = isDeadlineAchieved ? 
-    `<div style="font-size: 36px; font-weight: bold; color: #28a745; margin-bottom: 5px;">✓</div>` :
-    `<div style="font-size: 36px; font-weight: bold; color: #dc3545; margin-bottom: 5px;">✗</div>`;
+  const isDeadlineAchieved =
+    finalCompletionRate === 100 && finalInProgress === 0;
+  const deadlineStatus = isDeadlineAchieved
+    ? `<div style="font-size: 36px; font-weight: bold; color: #28a745; margin-bottom: 5px;">✓</div>`
+    : `<div style="font-size: 36px; font-weight: bold; color: #dc3545; margin-bottom: 5px;">✗</div>`;
   const deadlineText = isDeadlineAchieved ? "納期達成" : "納期未達成";
 
   statsGrid.innerHTML = `
-        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-            <div style="font-size: 36px; font-weight: bold; color: #667eea; margin-bottom: 5px;">${finalCompletionRate}%</div>
-            <div style="font-size: 14px; color: #6c757d;">完了率</div>
-        </div>
-        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-            ${deadlineStatus}
-            <div style="font-size: 14px; color: #6c757d;">${deadlineText}</div>
-        </div>
-        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-            <div style="font-size: 36px; font-weight: bold; color: #e74c3c; margin-bottom: 5px;">${maxTasks}</div>
-            <div style="font-size: 14px; color: #6c757d;">最大週次タスク</div>
-        </div>
-        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-            <div style="font-size: 36px; font-weight: bold; color: #f39c12; margin-bottom: 5px;">${avgTasks}</div>
-            <div style="font-size: 14px; color: #6c757d;">平均週次タスク</div>
-        </div>
-    `;
+            <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                <div style="font-size: 36px; font-weight: bold; color: #667eea; margin-bottom: 5px;">${finalCompletionRate}%</div>
+                <div style="font-size: 14px; color: #6c757d;">完了率</div>
+            </div>
+            <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                ${deadlineStatus}
+                <div style="font-size: 14px; color: #6c757d;">${deadlineText}</div>
+            </div>
+            <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                <div style="font-size: 36px; font-weight: bold; color: #e74c3c; margin-bottom: 5px;">${maxTasks}</div>
+                <div style="font-size: 14px; color: #6c757d;">最大週次タスク</div>
+            </div>
+            <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                <div style="font-size: 36px; font-weight: bold; color: #f39c12; margin-bottom: 5px;">${avgTasks}</div>
+                <div style="font-size: 14px; color: #6c757d;">平均週次タスク</div>
+            </div>
+        `;
 
   const timeline = document.createElement("div");
   timeline.style.cssText = `
-        padding: 20px;
-        background: linear-gradient(to right, #e3f2fd 0%, #f3e5f5 100%);
-        border-radius: 8px;
-        text-align: center;
-    `;
+            padding: 20px;
+            background: linear-gradient(to right, #e3f2fd 0%, #f3e5f5 100%);
+            border-radius: 8px;
+            text-align: center;
+        `;
   timeline.innerHTML = `
-        <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 20px;">
-            <div>
-                <div style="font-size: 12px; color: #6c757d;">開始</div>
-                <div style="font-weight: bold; color: #1976d2;">${scheduleData.projectInfo?.startDate || '-'}</div>
+            <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 20px;">
+                <div>
+                    <div style="font-size: 12px; color: #6c757d;">開始</div>
+                    <div style="font-weight: bold; color: #1976d2;">${
+                      scheduleData.projectInfo?.startDate || "-"
+                    }</div>
+                </div>
+                <div style="font-size: 24px; color: #9c27b0;">→</div>
+                <div>
+                    <div style="font-size: 12px; color: #6c757d;">納期</div>
+                    <div style="font-weight: bold; color: #388e3c;">${
+                      scheduleData.projectInfo?.deadline || "-"
+                    }</div>
+                </div>
+                <div style="font-size: 24px; color: #9c27b0;">→</div>
+                <div>
+                    <div style="font-size: 12px; color: #6c757d;">完了</div>
+                    <div style="font-weight: bold; color: #7b1fa2;">${
+                      scheduleData.projectInfo?.endDate || "-"
+                    }</div>
+                </div>
             </div>
-            <div style="font-size: 24px; color: #9c27b0;">→</div>
-            <div>
-                <div style="font-size: 12px; color: #6c757d;">納期</div>
-                <div style="font-weight: bold; color: #388e3c;">${scheduleData.projectInfo?.deadline || '-'}</div>
-            </div>
-            <div style="font-size: 24px; color: #9c27b0;">→</div>
-            <div>
-                <div style="font-size: 12px; color: #6c757d;">完了</div>
-                <div style="font-weight: bold; color: #7b1fa2;">${scheduleData.projectInfo?.endDate || '-'}</div>
-            </div>
-        </div>
-    `;
+        `;
 
   statsContent.appendChild(statsGrid);
   statsContent.appendChild(timeline);
@@ -304,31 +317,32 @@ function displaySchedule() {
   if (!isDeadlineAchieved) {
     const warningDiv = document.createElement("div");
     warningDiv.style.cssText = `
-      background: #f8d7da;
-      border: 1px solid #f5c6cb;
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 20px;
-      color: #721c24;
-      font-size: 14px;
-    `;
-    
-    let warningMessage = '<strong>⚠️ 納期未達成の理由:</strong><br>';
-    
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+        color: #721c24;
+        font-size: 14px;
+        `;
+
+    let warningMessage = "<strong>⚠️ 納期未達成の理由:</strong><br>";
+
     if (finalInProgress > 0) {
       warningMessage += `• ${finalInProgress}ページが進行中のまま残っています<br>`;
     }
-    
+
     if (lastMeeting.progress.notStarted > 0) {
       warningMessage += `• ${lastMeeting.progress.notStarted}ページが未着手です<br>`;
     }
-    
+
     if (finalCompletionRate < 100) {
       warningMessage += `• 完了率が${finalCompletionRate}%で100%に達していません<br>`;
     }
-    
-    warningMessage += '<br>最終週にまだ修正依頼提出などの作業が残っているため、プロジェクトが完了していません。';
-    
+
+    warningMessage +=
+      "<br>最終週にまだ修正依頼提出などの作業が残っているため、プロジェクトが完了していません。";
+
     warningDiv.innerHTML = warningMessage;
     statsContent.appendChild(warningDiv);
   }
@@ -339,229 +353,274 @@ function displaySchedule() {
   container.appendChild(finalStats);
 }
 
-// タスク数を平準化するページ配分最適化関数
-function optimizePageDistribution(totalPages, totalWeeks, firstWeekPages, tasksPerPage) {
-    const TARGET_MIN = 15; // 目標最小タスク数
-    const TARGET_MAX = 20; // 目標最大タスク数
-    const weeksPerPageCompletion = 9;
+// タスク上限を考慮したページ配分最適化関数
+function optimizePageDistribution(
+  totalPages,
+  totalWeeks,
+  firstWeekPages,
+  taskLimit
+) {
+  const weeksPerPageCompletion = 9;
+  
+  // シンプルな配分から開始
+  let distribution = new Array(totalWeeks).fill(0);
+  distribution[0] = firstWeekPages;
+  let remaining = totalPages - firstWeekPages;
+  
+  // タスク上限が設定されていない場合は従来の配分
+  if (!taskLimit || taskLimit === 0) {
+    // プロジェクト全体に分散
+    const maxStartWeek = Math.max(totalWeeks - weeksPerPageCompletion, Math.floor(totalWeeks * 0.7));
+    const avgPagesPerWeek = remaining / (maxStartWeek - 1);
     
-    // シミュレーションベースの最適化
-    let bestDistribution = new Array(totalWeeks).fill(0);
-    bestDistribution[0] = firstWeekPages;
-    let bestVariance = Infinity;
-    
-    // 複数のパターンを試行
-    for (let attempt = 0; attempt < 50; attempt++) {
-        let distribution = new Array(totalWeeks).fill(0);
-        distribution[0] = firstWeekPages;
-        let remaining = totalPages - firstWeekPages;
-        
-        // ランダムに配分（ただし制約を考慮）
-        const maxStartWeek = Math.min(totalWeeks - weeksPerPageCompletion, 10);
-        
-        // 台形型の配分を試みる
-        let weekWeights = [];
-        if (attempt < 25) {
-            // 前半は台形型パターン
-            for (let i = 1; i <= maxStartWeek; i++) {
-                if (i <= 3) weekWeights.push(2 + Math.random());
-                else if (i <= 7) weekWeights.push(3 + Math.random());
-                else weekWeights.push(1 + Math.random());
-            }
-        } else {
-            // 後半はより均等な配分
-            for (let i = 1; i <= maxStartWeek; i++) {
-                weekWeights.push(2 + Math.random() * 2);
-            }
-        }
-        
-        // 重みを正規化して配分
-        const totalWeight = weekWeights.reduce((sum, w) => sum + w, 0);
-        for (let i = 0; i < weekWeights.length && i + 1 < totalWeeks; i++) {
-            const pages = Math.round(remaining * weekWeights[i] / totalWeight);
-            distribution[i + 1] = Math.min(pages, remaining);
-            remaining -= distribution[i + 1];
-        }
-        
-        // 残りを配分
-        for (let i = 1; i < maxStartWeek && remaining > 0; i++) {
-            if (distribution[i] < 4) {
-                distribution[i]++;
-                remaining--;
-            }
-        }
-        
-        // このパターンでタスク数をシミュレート
-        const weeklyTasks = simulateWeeklyTasks(distribution, totalWeeks, tasksPerPage);
-        const variance = calculateVariance(weeklyTasks);
-        const maxTask = Math.max(...weeklyTasks);
-        const minTask = Math.min(...weeklyTasks.filter(t => t > 0));
-        
-        // 評価（分散が小さく、かつ目標範囲内に収まるものを優先）
-        let score = variance;
-        if (maxTask > TARGET_MAX) score += (maxTask - TARGET_MAX) * 10;
-        if (minTask < TARGET_MIN && minTask > 0) score += (TARGET_MIN - minTask) * 5;
-        
-        if (score < bestVariance) {
-            bestVariance = score;
-            bestDistribution = [...distribution];
-        }
+    for (let week = 1; week < maxStartWeek && remaining > 0; week++) {
+      const pages = Math.min(Math.ceil(avgPagesPerWeek), remaining);
+      distribution[week] = pages;
+      remaining -= pages;
     }
     
-    return bestDistribution;
+    return distribution;
+  }
+  
+  // タスク上限が設定されている場合
+  // まず各週のタスク数をシミュレートしながら配分
+  const pageStates = [];
+  
+  // 第1週のページを追加
+  for (let i = 0; i < firstWeekPages; i++) {
+    pageStates.push({
+      startWeek: 0,
+      currentStage: 0,
+      phase: 0
+    });
+  }
+  
+  // 残りのページを順次追加
+  for (let week = 1; week < totalWeeks && remaining > 0; week++) {
+    // 現在週のecbeingタスク数を計算
+    let weekTasks = 0;
+    
+    // 既存ページのタスクをカウント
+    pageStates.forEach(page => {
+      const weeksSinceStart = week - page.startWeek;
+      const phaseWeek = weeksSinceStart - page.phase * 3;
+      
+      if (page.phase < 3 && phaseWeek >= 0 && phaseWeek < 3) {
+        if (phaseWeek === 0 || phaseWeek === 2) {
+          weekTasks++; // 提出または修正版提出
+        }
+      }
+    });
+    
+    // 上限に余裕があれば新規ページを追加
+    let newPages = 0;
+    while (remaining > 0 && weekTasks + newPages < taskLimit) {
+      newPages++;
+      remaining--;
+      
+      pageStates.push({
+        startWeek: week,
+        currentStage: 0,
+        phase: 0
+      });
+      
+      // 新規ページの第1週目は1タスク追加
+      if (weekTasks + newPages >= taskLimit) break;
+    }
+    
+    distribution[week] = newPages;
+    
+    // ページのフェーズを更新
+    pageStates.forEach(page => {
+      const weeksSinceStart = week - page.startWeek;
+      if (weeksSinceStart > 0 && (weeksSinceStart - 1) % 3 === 2) {
+        page.phase++;
+      }
+    });
+  }
+  
+  // 残りのページがある場合は警告
+  if (remaining > 0) {
+    console.warn(`タスク上限${taskLimit}の制約により、${remaining}ページが期間内に開始できません`);
+  }
+  
+  return distribution;
 }
 
 // 週次タスク数をシミュレート
 function simulateWeeklyTasks(pagesPerWeek, totalWeeks, tasksPerPage) {
-    const weeklyTasks = new Array(totalWeeks).fill(0);
-    const pageStates = [];
-    
-    // ページの初期化
-    for (let week = 0; week < totalWeeks; week++) {
-        for (let i = 0; i < pagesPerWeek[week]; i++) {
-            pageStates.push({
-                startWeek: week,
-                currentStage: 0,
-                lastAction: week
-            });
+  const weeklyTasks = new Array(totalWeeks).fill(0);
+  const pageStates = [];
+  const taskCycle = scheduleData.taskCycle;
+
+  // ページの初期化
+  for (let week = 0; week < totalWeeks; week++) {
+    for (let i = 0; i < pagesPerWeek[week]; i++) {
+      pageStates.push({
+        startWeek: week,
+        currentStage: 0,
+        phase: 0, // 0: PC, 1: SP, 2: Coding
+      });
+    }
+  }
+
+  // 各週のタスクを計算
+  for (let week = 0; week < totalWeeks; week++) {
+    pageStates.forEach((page) => {
+      if (page.currentStage >= tasksPerPage) return;
+
+      const weeksSinceStart = week - page.startWeek;
+      const phase = page.phase;
+
+      // 各フェーズのタスク（例：PCデザイン、SPデザイン、コーディング）
+      // フェーズごとに3週間（提出→修正依頼→修正版提出&確定）
+      if (phase < 3) {
+        const phaseWeek = weeksSinceStart - phase * 3;
+        
+        if (phaseWeek === 0) {
+          // 提出週（ecbeingタスク）
+          weeklyTasks[week]++;
+          page.currentStage++;
+        } else if (phaseWeek === 1) {
+          // 修正依頼週（クライアントタスク）
+          // シミュレーションではecbeingタスクのみカウント
+          page.currentStage++;
+        } else if (phaseWeek === 2) {
+          // 修正版提出&確定週（ecbeingタスク）
+          weeklyTasks[week]++;
+          page.currentStage++;
+          page.phase++; // 次のフェーズへ
         }
-    }
-    
-    // 各週のタスクを計算
-    for (let week = 0; week < totalWeeks; week++) {
-        pageStates.forEach(page => {
-            if (page.currentStage >= tasksPerPage) return;
-            
-            const weeksSinceAction = week - page.lastAction;
-            
-            // 新規開始または進行中のタスク
-            if (week === page.startWeek || weeksSinceAction === 1) {
-                weeklyTasks[week] += 2; // メインタスク + 修正依頼
-                page.currentStage += 2;
-                page.lastAction = week;
-            } else if (weeksSinceAction >= 2) {
-                weeklyTasks[week] += 2;
-                page.currentStage += 2;
-                page.lastAction = week;
-            }
-        });
-    }
-    
-    return weeklyTasks;
+      }
+    });
+  }
+
+  return weeklyTasks;
 }
 
 // 分散を計算
 function calculateVariance(values) {
-    const validValues = values.filter(v => v > 0);
-    if (validValues.length === 0) return 0;
-    
-    const mean = validValues.reduce((sum, v) => sum + v, 0) / validValues.length;
-    const variance = validValues.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / validValues.length;
-    return Math.sqrt(variance); // 標準偏差
+  const validValues = values.filter((v) => v > 0);
+  if (validValues.length === 0) return 0;
+
+  const mean = validValues.reduce((sum, v) => sum + v, 0) / validValues.length;
+  const variance =
+    validValues.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) /
+    validValues.length;
+  return Math.sqrt(variance); // 標準偏差
 }
 
 // ミーティングデータを生成
 function generateMeetingsForPattern() {
-    // 第1週の開始ページ数を取得
-    const firstWeekPagesInput = document.getElementById("firstWeekPages");
-    const firstWeekPages = firstWeekPagesInput ? parseInt(firstWeekPagesInput.value) || 7 : 7;
-    
-    const totalPages = scheduleData.pages.length;
-    const totalWeeks = scheduleData.projectWeeks || 18;
-    const tasksPerPage = scheduleData.taskCycle.length; // 9工程
-    
-    // 1ページあたりの実際の進行速度を考慮
-    // PCデザイン(3工程): 3週間、SPデザイン(3工程): 3週間、コーディング(3工程): 3週間 = 計9週間
-    const weeksPerPageCompletion = 9;
-    
-    // 全ページを完了させるには理論上 35ページ × 9週間 = 315週間分の作業が必要
-    // しかし18週間で完了させるには並行作業が必要
-    
-    // 最適なページ配分を計算
-    let pagesPerWeek = new Array(totalWeeks).fill(0);
-    
-    // 18週間をフルに活用するため、ページを段階的に開始
-    // 各ページが完了するまで9週間必要なので、最後のページは遅くとも10週目には開始する必要がある
-    const latestStartWeek = Math.max(1, totalWeeks - weeksPerPageCompletion);
-    
-    // 第1週の開始ページ数を設定
-    pagesPerWeek[0] = Math.min(firstWeekPages, totalPages);
-    let remainingPages = totalPages - pagesPerWeek[0];
-    
-    if (remainingPages > 0) {
-      // タスク平準化モードがオンの場合
-      const smoothModeEnabled = document.getElementById('smoothMode')?.checked ?? true;
-      
-      if (smoothModeEnabled) {
-        // 動的ページ配分アルゴリズム - タスクを平準化
-        pagesPerWeek = optimizePageDistribution(
-          totalPages, 
-          totalWeeks, 
-          firstWeekPages,
-          tasksPerPage
-        );
-      } else {
-        // 従来の配分方法
-        if (totalWeeks >= 18) {
-          // 18週間以上の場合：前半から中盤にかけて多めに配分
-          const weeks = [2, 2, 2, 3, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0];
-          for (let i = 1; i < totalWeeks && i < weeks.length && remainingPages > 0; i++) {
-            const toAdd = Math.min(weeks[i], remainingPages);
-            pagesPerWeek[i] = toAdd;
-            remainingPages -= toAdd;
-          }
-          
-          // まだ残っている場合は中盤に追加
-          for (let i = 4; i < 12 && remainingPages > 0; i++) {
-            if (pagesPerWeek[i] < 4) {
-              const toAdd = Math.min(1, remainingPages);
-              pagesPerWeek[i] += toAdd;
-              remainingPages -= toAdd;
-            }
-          }
-        } else {
-          // 18週間未満の場合：均等に配分
-          const weeksToDistribute = Math.min(latestStartWeek, totalWeeks - 1);
-          const basePerWeek = Math.floor(remainingPages / weeksToDistribute);
-          const extra = remainingPages % weeksToDistribute;
-          
-          for (let i = 1; i <= weeksToDistribute && i < totalWeeks; i++) {
-            pagesPerWeek[i] = basePerWeek + (i <= extra ? 1 : 0);
-          }
-          remainingPages = 0;
-        }
-      }
-    }
-    
-    // 合計が35ページになるように調整
-    let currentTotal = pagesPerWeek.reduce((sum, p) => sum + p, 0);
-    remainingPages = totalPages - currentTotal;
-    
-    if (remainingPages > 0) {
-      // 残りページを中間週に配分
-      for (let i = 3; i < latestStartWeek && remainingPages > 0; i++) {
-        if (pagesPerWeek[i] < 4) {
-          const toAdd = Math.min(remainingPages, 4 - pagesPerWeek[i]);
-          pagesPerWeek[i] += toAdd;
+  // 第1週の開始ページ数を取得
+  const firstWeekPagesInput = document.getElementById("firstWeekPages");
+  const firstWeekPages = firstWeekPagesInput
+    ? parseInt(firstWeekPagesInput.value) || 7
+    : 7;
+
+  const totalPages = scheduleData.pages.length;
+  const totalWeeks = scheduleData.projectWeeks || 18;
+  const tasksPerPage = scheduleData.taskCycle.length; // 9工程
+
+  // 1ページあたりの実際の進行速度を考慮
+  // PCデザイン(3工程): 3週間、SPデザイン(3工程): 3週間、コーディング(3工程): 3週間 = 計9週間
+  const weeksPerPageCompletion = 9;
+
+  // 全ページを完了させるには理論上 35ページ × 9週間 = 315週間分の作業が必要
+  // しかし18週間で完了させるには並行作業が必要
+
+  // 最適なページ配分を計算
+  let pagesPerWeek = new Array(totalWeeks).fill(0);
+
+  // 18週間をフルに活用するため、ページを段階的に開始
+  // 各ページが完了するまで9週間必要なので、最後のページは遅くとも10週目には開始する必要がある
+  const latestStartWeek = Math.max(1, totalWeeks - weeksPerPageCompletion);
+
+  // 第1週の開始ページ数を設定
+  pagesPerWeek[0] = Math.min(firstWeekPages, totalPages);
+  let remainingPages = totalPages - pagesPerWeek[0];
+
+  if (remainingPages > 0) {
+    // タスク上限が設定されている場合
+    const taskLimit = parseInt(document.getElementById("taskLimit")?.value) || 0;
+
+    if (taskLimit > 0) {
+      // タスク上限を考慮したページ配分
+      pagesPerWeek = optimizePageDistribution(
+        totalPages,
+        totalWeeks,
+        firstWeekPages,
+        taskLimit
+      );
+    } else {
+      // 従来の配分方法
+      if (totalWeeks >= 18) {
+        // 18週間以上の場合：前半から中盤にかけて多めに配分
+        const weeks = [2, 2, 2, 3, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0];
+        for (
+          let i = 1;
+          i < totalWeeks && i < weeks.length && remainingPages > 0;
+          i++
+        ) {
+          const toAdd = Math.min(weeks[i], remainingPages);
+          pagesPerWeek[i] = toAdd;
           remainingPages -= toAdd;
         }
-      }
-    } else if (remainingPages < 0) {
-      // 多すぎる場合は後半から削減
-      for (let i = latestStartWeek - 1; i >= 0 && remainingPages < 0; i--) {
-        if (pagesPerWeek[i] > 1) {
-          const toRemove = Math.min(pagesPerWeek[i] - 1, -remainingPages);
-          pagesPerWeek[i] -= toRemove;
-          remainingPages += toRemove;
+
+        // まだ残っている場合は中盤に追加
+        for (let i = 4; i < 12 && remainingPages > 0; i++) {
+          if (pagesPerWeek[i] < 4) {
+            const toAdd = Math.min(1, remainingPages);
+            pagesPerWeek[i] += toAdd;
+            remainingPages -= toAdd;
+          }
         }
+      } else {
+        // 18週間未満の場合：均等に配分
+        const weeksToDistribute = Math.min(latestStartWeek, totalWeeks - 1);
+        const basePerWeek = Math.floor(remainingPages / weeksToDistribute);
+        const extra = remainingPages % weeksToDistribute;
+
+        for (let i = 1; i <= weeksToDistribute && i < totalWeeks; i++) {
+          pagesPerWeek[i] = basePerWeek + (i <= extra ? 1 : 0);
+        }
+        remainingPages = 0;
       }
     }
-    
-    console.log('第1週開始ページ数:', firstWeekPages);
-    console.log('ページ配分:', pagesPerWeek);
-    console.log('合計ページ数:', pagesPerWeek.reduce((sum, p) => sum + p, 0));
-    
-    return generateScheduleWithPattern(pagesPerWeek);
+  }
+
+  // 合計が35ページになるように調整
+  let currentTotal = pagesPerWeek.reduce((sum, p) => sum + p, 0);
+  remainingPages = totalPages - currentTotal;
+
+  if (remainingPages > 0) {
+    // 残りページを中間週に配分
+    for (let i = 3; i < latestStartWeek && remainingPages > 0; i++) {
+      if (pagesPerWeek[i] < 4) {
+        const toAdd = Math.min(remainingPages, 4 - pagesPerWeek[i]);
+        pagesPerWeek[i] += toAdd;
+        remainingPages -= toAdd;
+      }
+    }
+  } else if (remainingPages < 0) {
+    // 多すぎる場合は後半から削減
+    for (let i = latestStartWeek - 1; i >= 0 && remainingPages < 0; i--) {
+      if (pagesPerWeek[i] > 1) {
+        const toRemove = Math.min(pagesPerWeek[i] - 1, -remainingPages);
+        pagesPerWeek[i] -= toRemove;
+        remainingPages += toRemove;
+      }
+    }
+  }
+
+  console.log("第1週開始ページ数:", firstWeekPages);
+  console.log("ページ配分:", pagesPerWeek);
+  console.log(
+    "合計ページ数:",
+    pagesPerWeek.reduce((sum, p) => sum + p, 0)
+  );
+
+  return generateScheduleWithPattern(pagesPerWeek);
 }
 
 // タスクがecbeing側かクライアント側かを判定
@@ -580,14 +639,14 @@ function createMeetingSection(meeting) {
   const section = document.createElement("div");
   section.className = "meeting-section";
   section.style.cssText = `
-        margin-bottom: 30px;
-        border: none;
-        border-radius: 12px;
-        overflow: hidden;
-        background: white;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.07);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    `;
+            margin-bottom: 30px;
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        `;
 
   section.onmouseover = () => {
     section.style.transform = "translateY(-2px)";
@@ -602,15 +661,15 @@ function createMeetingSection(meeting) {
   const header = document.createElement("div");
   header.className = "meeting-header";
   header.style.cssText = `
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 20px 25px;
-        font-size: 18px;
-        font-weight: bold;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    `;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 25px;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        `;
 
   const headerLeft = document.createElement("div");
   headerLeft.innerHTML = `<span style="font-size: 24px; margin-right: 10px;">📅</span> 第${meeting.meetingNo}回ミーティング`;
@@ -655,35 +714,35 @@ function createMeetingSection(meeting) {
   const summary = document.createElement("div");
   summary.className = "task-summary";
   summary.style.cssText = `
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 15px;
-        padding: 20px 25px;
-        background: #f8f9fa;
-        border-bottom: 1px solid #e9ecef;
-    `;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            padding: 20px 25px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        `;
 
   const totalTasks = meeting.meetingTasks.length + meeting.weekTasks.length;
   const completionRate = Math.round((meeting.progress.completed / 35) * 100);
 
   summary.innerHTML = `
-        <div style="text-align: center;">
-            <div style="font-size: 32px; font-weight: bold; color: #667eea;">${totalTasks}</div>
-            <div style="font-size: 14px; color: #6c757d;">今週のタスク</div>
-        </div>
-        <div style="text-align: center;">
-            <div style="font-size: 32px; font-weight: bold; color: #e74c3c;">${devCount}</div>
-            <div style="font-size: 14px; color: #6c757d;">ecbeing側</div>
-        </div>
-        <div style="text-align: center;">
-            <div style="font-size: 32px; font-weight: bold; color: #27ae60;">${clientCount}</div>
-            <div style="font-size: 14px; color: #6c757d;">クライアント側</div>
-        </div>
-        <div style="text-align: center;">
-            <div style="font-size: 32px; font-weight: bold; color: #f39c12;">${completionRate}%</div>
-            <div style="font-size: 14px; color: #6c757d;">完了率</div>
-        </div>
-    `;
+            <div style="text-align: center;">
+                <div style="font-size: 32px; font-weight: bold; color: #667eea;">${totalTasks}</div>
+                <div style="font-size: 14px; color: #6c757d;">今週のタスク</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 32px; font-weight: bold; color: #e74c3c;">${devCount}</div>
+                <div style="font-size: 14px; color: #6c757d;">ecbeing側</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 32px; font-weight: bold; color: #27ae60;">${clientCount}</div>
+                <div style="font-size: 14px; color: #6c757d;">クライアント側</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 32px; font-weight: bold; color: #f39c12;">${completionRate}%</div>
+                <div style="font-size: 14px; color: #6c757d;">完了率</div>
+            </div>
+        `;
   content.appendChild(summary);
 
   // タスクコンテナ
@@ -699,19 +758,19 @@ function createMeetingSection(meeting) {
     const meetingTitle = document.createElement("div");
     meetingTitle.className = "task-group-title";
     meetingTitle.style.cssText = `
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 15px;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        `;
+                font-weight: 600;
+                color: #2c3e50;
+                margin-bottom: 15px;
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            `;
     meetingTitle.innerHTML = `
-            <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #667eea; color: white; border-radius: 50%; font-size: 14px;">📋</span>
-            ミーティングタスク
-            <span style="background: #e3f2fd; color: #1976d2; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: normal;">${meeting.meetingTasks.length}件</span>
-        `;
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #667eea; color: white; border-radius: 50%; font-size: 14px;">📋</span>
+                ミーティングタスク
+                <span style="background: #e3f2fd; color: #1976d2; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: normal;">${meeting.meetingTasks.length}件</span>
+            `;
 
     const meetingList = document.createElement("div");
     meetingList.style.cssText = "display: grid; gap: 10px;";
@@ -725,18 +784,18 @@ function createMeetingSection(meeting) {
       else if (taskType === "both") borderColor = "#f39c12";
 
       item.style.cssText = `
-                padding: 15px;
-                background: white;
-                border: 1px solid #e0e0e0;
-                border-left: 4px solid ${borderColor};
-                border-radius: 8px;
-                font-size: 14px;
-                transition: all 0.2s ease;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                cursor: pointer;
-            `;
+                    padding: 15px;
+                    background: white;
+                    border: 1px solid #e0e0e0;
+                    border-left: 4px solid ${borderColor};
+                    border-radius: 8px;
+                    font-size: 14px;
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    cursor: pointer;
+                `;
 
       item.onmouseover = () => {
         item.style.background = "#f8f9fa";
@@ -782,9 +841,9 @@ function createMeetingSection(meeting) {
       const taskInfo = document.createElement("div");
       taskInfo.style.cssText = "flex: 1;";
       taskInfo.innerHTML = `
-                <div style="font-weight: 500; color: #2c3e50;">${task.process}</div>
-                <div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${task.page}</div>
-            `;
+                    <div style="font-weight: 500; color: #2c3e50;">${task.process}</div>
+                    <div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${task.page}</div>
+                `;
 
       const taskNo = document.createElement("span");
       taskNo.style.cssText = "font-size: 12px; color: #adb5bd;";
@@ -808,19 +867,19 @@ function createMeetingSection(meeting) {
     const weekTitle = document.createElement("div");
     weekTitle.className = "task-group-title";
     weekTitle.style.cssText = `
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 15px;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        `;
+                font-weight: 600;
+                color: #2c3e50;
+                margin-bottom: 15px;
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            `;
     weekTitle.innerHTML = `
-            <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #27ae60; color: white; border-radius: 50%; font-size: 14px;">⏰</span>
-            週内作業（3営業日以内）
-            <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: normal;">${meeting.weekTasks.length}件</span>
-        `;
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #27ae60; color: white; border-radius: 50%; font-size: 14px;">⏰</span>
+                週内作業（3営業日以内）
+                <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: normal;">${meeting.weekTasks.length}件</span>
+            `;
 
     const weekList = document.createElement("div");
     weekList.style.cssText = "display: grid; gap: 10px;";
@@ -834,18 +893,18 @@ function createMeetingSection(meeting) {
       else if (taskType === "both") borderColor = "#f39c12";
 
       item.style.cssText = `
-                padding: 15px;
-                background: #f0fdf4;
-                border: 1px solid #bbf7d0;
-                border-left: 4px solid ${borderColor};
-                border-radius: 8px;
-                font-size: 14px;
-                transition: all 0.2s ease;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                cursor: pointer;
-            `;
+                    padding: 15px;
+                    background: #f0fdf4;
+                    border: 1px solid #bbf7d0;
+                    border-left: 4px solid ${borderColor};
+                    border-radius: 8px;
+                    font-size: 14px;
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    cursor: pointer;
+                `;
 
       item.onmouseover = () => {
         item.style.background = "#e6fffa";
@@ -891,9 +950,9 @@ function createMeetingSection(meeting) {
       const taskInfo = document.createElement("div");
       taskInfo.style.cssText = "flex: 1;";
       taskInfo.innerHTML = `
-                <div style="font-weight: 500; color: #2c3e50;">${task.process}</div>
-                <div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${task.page}</div>
-            `;
+                    <div style="font-weight: 500; color: #2c3e50;">${task.process}</div>
+                    <div style="font-size: 12px; color: #6c757d; margin-top: 2px;">${task.page}</div>
+                `;
 
       const taskNo = document.createElement("span");
       taskNo.style.cssText = "font-size: 12px; color: #adb5bd;";
@@ -914,10 +973,10 @@ function createMeetingSection(meeting) {
   // 進捗バー
   const progressBar = document.createElement("div");
   progressBar.style.cssText = `
-        padding: 20px 25px;
-        background: linear-gradient(to right, #f8f9fa 0%, #e9ecef 100%);
-        border-top: 1px solid #dee2e6;
-    `;
+            padding: 20px 25px;
+            background: linear-gradient(to right, #f8f9fa 0%, #e9ecef 100%);
+            border-top: 1px solid #dee2e6;
+        `;
 
   const progressTitle = document.createElement("div");
   progressTitle.style.cssText =
@@ -926,12 +985,12 @@ function createMeetingSection(meeting) {
 
   const progressBarContainer = document.createElement("div");
   progressBarContainer.style.cssText = `
-        background: #e9ecef;
-        border-radius: 10px;
-        height: 20px;
-        overflow: hidden;
-        position: relative;
-    `;
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            position: relative;
+        `;
 
   const completedPercent = Math.round((meeting.progress.completed / 35) * 100);
   const inProgressPercent = Math.round(
@@ -940,27 +999,27 @@ function createMeetingSection(meeting) {
 
   const progressFill = document.createElement("div");
   progressFill.style.cssText = `
-        display: flex;
-        height: 100%;
-    `;
+            display: flex;
+            height: 100%;
+        `;
 
   if (completedPercent > 0) {
     const completedBar = document.createElement("div");
     completedBar.style.cssText = `
-            background: #28a745;
-            width: ${completedPercent}%;
-            transition: width 0.3s ease;
-        `;
+                background: #28a745;
+                width: ${completedPercent}%;
+                transition: width 0.3s ease;
+            `;
     progressFill.appendChild(completedBar);
   }
 
   if (inProgressPercent > 0) {
     const inProgressBar = document.createElement("div");
     inProgressBar.style.cssText = `
-            background: #ffc107;
-            width: ${inProgressPercent}%;
-            transition: width 0.3s ease;
-        `;
+                background: #ffc107;
+                width: ${inProgressPercent}%;
+                transition: width 0.3s ease;
+            `;
     progressFill.appendChild(inProgressBar);
   }
 
@@ -968,16 +1027,16 @@ function createMeetingSection(meeting) {
 
   const progressStats = document.createElement("div");
   progressStats.style.cssText = `
-        display: flex;
-        justify-content: space-between;
-        margin-top: 10px;
-        font-size: 13px;
-    `;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 13px;
+        `;
   progressStats.innerHTML = `
-        <div><span style="display: inline-block; width: 10px; height: 10px; background: #28a745; border-radius: 2px; margin-right: 5px;"></span>完了: ${meeting.progress.completed}ページ</div>
-        <div><span style="display: inline-block; width: 10px; height: 10px; background: #ffc107; border-radius: 2px; margin-right: 5px;"></span>進行中: ${meeting.progress.inProgress}ページ</div>
-        <div><span style="display: inline-block; width: 10px; height: 10px; background: #e9ecef; border-radius: 2px; margin-right: 5px;"></span>未着手: ${meeting.progress.notStarted}ページ</div>
-    `;
+            <div><span style="display: inline-block; width: 10px; height: 10px; background: #28a745; border-radius: 2px; margin-right: 5px;"></span>完了: ${meeting.progress.completed}ページ</div>
+            <div><span style="display: inline-block; width: 10px; height: 10px; background: #ffc107; border-radius: 2px; margin-right: 5px;"></span>進行中: ${meeting.progress.inProgress}ページ</div>
+            <div><span style="display: inline-block; width: 10px; height: 10px; background: #e9ecef; border-radius: 2px; margin-right: 5px;"></span>未着手: ${meeting.progress.notStarted}ページ</div>
+        `;
 
   progressBar.appendChild(progressTitle);
   progressBar.appendChild(progressBarContainer);
@@ -1089,33 +1148,40 @@ function downloadCSV(csv, filename) {
 // スケジュールパターンの変更
 // 第1週開始ページ数が変更されたときの処理
 function onFirstWeekPagesChange() {
-  const firstWeekPages = parseInt(document.getElementById("firstWeekPages").value) || 7;
-  const previousFirstWeekPages = parseInt(document.getElementById("firstWeekPages").getAttribute("data-previous")) || 7;
-  
+  const firstWeekPages =
+    parseInt(document.getElementById("firstWeekPages").value) || 7;
+  const previousFirstWeekPages =
+    parseInt(
+      document.getElementById("firstWeekPages").getAttribute("data-previous")
+    ) || 7;
+
   // 前回の値を保存
-  document.getElementById("firstWeekPages").setAttribute("data-previous", firstWeekPages);
-  
+  document
+    .getElementById("firstWeekPages")
+    .setAttribute("data-previous", firstWeekPages);
+
   // スケジュール達成可能性をチェック
   checkScheduleFeasibility();
-  
+
   // グラフとスケジュールを更新
   drawTaskChart();
   const container = document.getElementById("schedule-container");
   container.innerHTML = "";
   displaySchedule();
   updateStats();
-  
+
   // 変更通知を表示
   showFirstWeekChangeMessage(previousFirstWeekPages, firstWeekPages);
 }
 
 // スケジュールが納期までに達成可能かチェック
 function checkScheduleFeasibility() {
-  const firstWeekPages = parseInt(document.getElementById("firstWeekPages").value) || 7;
+  const firstWeekPages =
+    parseInt(document.getElementById("firstWeekPages").value) || 7;
   const totalPages = scheduleData.pages.length;
   const totalWeeks = scheduleData.projectWeeks || 18;
   const taskCycle = scheduleData.taskCycle.length; // 9工程
-  
+
   // 実際のスケジュールを生成して最終週の進捗を確認
   const meetings = generateMeetingsForPattern();
   const lastMeeting = meetings[meetings.length - 1];
@@ -1124,38 +1190,41 @@ function checkScheduleFeasibility() {
   const finalNotStarted = lastMeeting.progress.notStarted;
   const finalTotal = finalCompleted + finalInProgress + finalNotStarted;
   const finalCompletionRate = Math.round((finalCompleted / finalTotal) * 100);
-  
+
   // 現在の設定で完了可能かチェック
   const warningDiv = document.getElementById("scheduleWarning");
-  
+
   if (finalCompletionRate < 100) {
     // 完了率が100%に達しない場合
     const unfinishedPages = finalInProgress + finalNotStarted;
     let recommendedFirstWeek = firstWeekPages;
-    
+
     // 推奨開始ページ数を計算
     if (firstWeekPages < 5 && unfinishedPages > 0) {
-      recommendedFirstWeek = Math.min(10, firstWeekPages + Math.ceil(unfinishedPages / 3));
+      recommendedFirstWeek = Math.min(
+        10,
+        firstWeekPages + Math.ceil(unfinishedPages / 3)
+      );
     }
-    
+
     warningDiv.style.display = "block";
     warningDiv.innerHTML = `
-      <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; padding: 12px; color: #721c24; font-size: 13px;">
-        <strong>⚠️ 警告:</strong> 現在の設定では納期までに100%完了できません。<br>
-        <span style="margin-left: 20px;">• 最終完了率: ${finalCompletionRate}%</span><br>
-        <span style="margin-left: 20px;">• 未完了: ${unfinishedPages}ページ（進行中: ${finalInProgress}、未着手: ${finalNotStarted}）</span><br>
-        <span style="margin-left: 20px;">• 推奨: 第1週の開始数を${recommendedFirstWeek}以上に増やしてください</span>
-      </div>
-    `;
+        <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; padding: 12px; color: #721c24; font-size: 13px;">
+            <strong>⚠️ 警告:</strong> 現在の設定では納期までに100%完了できません。<br>
+            <span style="margin-left: 20px;">• 最終完了率: ${finalCompletionRate}%</span><br>
+            <span style="margin-left: 20px;">• 未完了: ${unfinishedPages}ページ（進行中: ${finalInProgress}、未着手: ${finalNotStarted}）</span><br>
+            <span style="margin-left: 20px;">• 推奨: 第1週の開始数を${recommendedFirstWeek}以上に増やしてください</span>
+        </div>
+        `;
   } else if (firstWeekPages === 1) {
     // 第1週の開始数が1の場合（完了しても負荷が高い）
     warningDiv.style.display = "block";
     warningDiv.innerHTML = `
-      <div style="background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; padding: 12px; color: #856404; font-size: 13px;">
-        <strong>💡 ヒント:</strong> 第1週の開始ページ数が少ないため、後半の負荷が高くなります。<br>
-        <span style="margin-left: 20px;">開始ページ数を3〜4に増やすことをお勧めします。</span>
-      </div>
-    `;
+        <div style="background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; padding: 12px; color: #856404; font-size: 13px;">
+            <strong>💡 ヒント:</strong> 第1週の開始ページ数が少ないため、後半の負荷が高くなります。<br>
+            <span style="margin-left: 20px;">開始ページ数を3〜4に増やすことをお勧めします。</span>
+        </div>
+        `;
   } else {
     // 問題ない場合
     warningDiv.style.display = "none";
@@ -1248,21 +1317,31 @@ function updateProjectData() {
     pages: scheduleData.pages ? [...scheduleData.pages] : [],
     taskCycle: scheduleData.taskCycle ? [...scheduleData.taskCycle] : [],
     projectWeeks: scheduleData.projectWeeks || 18,
-    totalTasks: (scheduleData.pages?.length || 0) * (scheduleData.taskCycle?.length || 0),
-    devTasks: calculateTaskCount(scheduleData.pages || [], scheduleData.taskCycle || [], 'dev'),
-    clientTasks: calculateTaskCount(scheduleData.pages || [], scheduleData.taskCycle || [], 'client')
+    totalTasks:
+      (scheduleData.pages?.length || 0) * (scheduleData.taskCycle?.length || 0),
+    devTasks: calculateTaskCount(
+      scheduleData.pages || [],
+      scheduleData.taskCycle || [],
+      "dev"
+    ),
+    clientTasks: calculateTaskCount(
+      scheduleData.pages || [],
+      scheduleData.taskCycle || [],
+      "client"
+    ),
   };
 
   // プロジェクト週数を取得
-  const projectWeeks = parseInt(document.getElementById("projectWeeks").value) || 18;
-  
+  const projectWeeks =
+    parseInt(document.getElementById("projectWeeks").value) || 18;
+
   // 週数の検証
   if (projectWeeks < 8 || projectWeeks > 52) {
     alert("プロジェクト期間は8〜52週間の範囲で設定してください。");
     document.getElementById("projectWeeks").value = 18;
     return;
   }
-  
+
   // ページ一覧を取得
   const pageListText = document.getElementById("pageList").value;
   const pages = pageListText
@@ -1280,7 +1359,7 @@ function updateProjectData() {
   // データを更新
   scheduleData.pages = pages;
   scheduleData.taskCycle = taskCycle;
-  scheduleData.projectWeeks = projectWeeks;  // プロジェクト週数を保存
+  scheduleData.projectWeeks = projectWeeks; // プロジェクト週数を保存
 
   // ミーティングデータを再生成
   regenerateMeetingData(pages, taskCycle, projectWeeks);
@@ -1329,7 +1408,7 @@ function updateProjectData() {
     projectWeeks: projectWeeks,
     totalTasks: totalTasks,
     devTasks: devTasks,
-    clientTasks: clientTasks
+    clientTasks: clientTasks,
   };
 
   // 初期ロード時はトーストを表示しない
@@ -1344,9 +1423,12 @@ function calculateTaskCount(pages, taskCycle, type) {
   let count = 0;
   taskCycle.forEach((task) => {
     const taskType = getTaskType(task);
-    if (type === 'dev' && (taskType === "dev" || taskType === "both")) {
+    if (type === "dev" && (taskType === "dev" || taskType === "both")) {
       count += pages.length;
-    } else if (type === 'client' && (taskType === "client" || taskType === "both")) {
+    } else if (
+      type === "client" &&
+      (taskType === "client" || taskType === "both")
+    ) {
       count += pages.length;
     }
   });
@@ -1360,36 +1442,36 @@ function updateProjectOverview(pageCount, taskCount) {
     const scaleSection = overview.querySelector("div:nth-child(2) div");
     if (scaleSection) {
       scaleSection.innerHTML = `
-                <strong>対象ページ数:</strong> ${pageCount}ページ<br>
-                <strong>総タスク数:</strong> ${taskCount}件<br>
-                <strong>週次ミーティング:</strong> 毎週水曜日<br>
-                <strong>全18回開催</strong>
-            `;
+                    <strong>対象ページ数:</strong> ${pageCount}ページ<br>
+                    <strong>総タスク数:</strong> ${taskCount}件<br>
+                    <strong>週次ミーティング:</strong> 毎週水曜日<br>
+                    <strong>全18回開催</strong>
+                `;
     }
   }
 }
 
 // プロジェクト開始日の変更処理
 function onStartDateChange() {
-  const startDateInput = document.getElementById('projectStartDate');
-  const meetingDaySelect = document.getElementById('meetingDay');
+  const startDateInput = document.getElementById("projectStartDate");
+  const meetingDaySelect = document.getElementById("meetingDay");
   const selectedDate = new Date(startDateInput.value);
   const meetingDay = parseInt(meetingDaySelect.value);
-  
+
   // 選択された日付の曜日を取得
   const selectedDay = selectedDate.getDay();
-  
+
   // ミーティング曜日に合わせて日付を調整
   if (selectedDay !== meetingDay) {
     // 次のミーティング曜日まで進める
     const daysToAdd = (meetingDay - selectedDay + 7) % 7 || 7;
     selectedDate.setDate(selectedDate.getDate() + daysToAdd);
-    startDateInput.value = selectedDate.toISOString().split('T')[0];
+    startDateInput.value = selectedDate.toISOString().split("T")[0];
   }
-  
+
   // スケジュールデータを更新
   updateScheduleDates();
-  
+
   // 通知を表示
   const dateStr = formatDate(selectedDate);
   showSuccessMessage(`📅 プロジェクト開始日を${dateStr}に設定しました`);
@@ -1397,16 +1479,17 @@ function onStartDateChange() {
 
 // スケジュールの日付を更新
 function updateScheduleDates() {
-  const startDateInput = document.getElementById('projectStartDate');
+  const startDateInput = document.getElementById("projectStartDate");
   const startDate = new Date(startDateInput.value);
-  const projectWeeks = parseInt(document.getElementById('projectWeeks').value) || 18;
-  
+  const projectWeeks =
+    parseInt(document.getElementById("projectWeeks").value) || 18;
+
   // 週次タスクの日付を更新
   scheduleData.weeklyTasks = scheduleData.weeklyTasks || [];
   for (let i = 0; i < projectWeeks; i++) {
     const weekDate = new Date(startDate);
     weekDate.setDate(startDate.getDate() + i * 7);
-    
+
     if (scheduleData.weeklyTasks[i]) {
       scheduleData.weeklyTasks[i].date = formatDate(weekDate);
     } else {
@@ -1414,40 +1497,41 @@ function updateScheduleDates() {
         week: i + 1,
         tasks: 0,
         meeting: `第${i + 1}回`,
-        date: formatDate(weekDate)
+        date: formatDate(weekDate),
       });
     }
   }
-  
+
   // プロジェクト情報を更新
   scheduleData.projectInfo = scheduleData.projectInfo || {};
   scheduleData.projectInfo.startDate = formatDate(startDate);
-  
+
   // 終了日を計算
   const endDate = new Date(startDate);
   endDate.setDate(startDate.getDate() + (projectWeeks - 1) * 7);
   scheduleData.projectInfo.endDate = formatDate(endDate);
-  
+
   // 納期を計算（終了日の前の月曜日）
   const deadline = new Date(endDate);
   const dayOfWeek = deadline.getDay();
-  if (dayOfWeek !== 1) { // 月曜日でない場合
+  if (dayOfWeek !== 1) {
+    // 月曜日でない場合
     const daysToMonday = (1 - dayOfWeek + 7) % 7 || 7;
     deadline.setDate(deadline.getDate() - (7 - daysToMonday));
   }
   scheduleData.projectInfo.deadline = formatDate(deadline);
-  
+
   // 概要セクションの日付を更新
-  const startDateElement = document.getElementById('project-start-date');
-  const deadlineElement = document.getElementById('project-deadline');
-  const endDateElement = document.getElementById('project-end-date');
-  const durationElement = document.getElementById('project-duration');
-  
+  const startDateElement = document.getElementById("project-start-date");
+  const deadlineElement = document.getElementById("project-deadline");
+  const endDateElement = document.getElementById("project-end-date");
+  const durationElement = document.getElementById("project-duration");
+
   if (startDateElement) startDateElement.textContent = formatDate(startDate);
   if (deadlineElement) deadlineElement.textContent = formatDate(deadline);
   if (endDateElement) endDateElement.textContent = formatDate(endDate);
   if (durationElement) durationElement.textContent = projectWeeks;
-  
+
   // UIを更新
   drawTaskChart();
   const container = document.getElementById("schedule-container");
@@ -1456,22 +1540,22 @@ function updateScheduleDates() {
   updateStats();
 }
 
-// タスク平準化モードの変更処理
-function onSmoothModeChange() {
-  const smoothMode = document.getElementById('smoothMode').checked;
-  
+// 週次タスク上限の変更処理
+function onTaskLimitChange() {
+  const taskLimit = parseInt(document.getElementById("taskLimit").value) || 0;
+
   // スケジュールを再生成
   drawTaskChart();
   const container = document.getElementById("schedule-container");
   container.innerHTML = "";
   displaySchedule();
   updateStats();
-  
+
   // 通知を表示
-  const message = smoothMode 
-    ? "✅ タスク平準化モードを有効にしました<br>週次タスクが15-20件に調整されます"
-    : "⚠️ タスク平準化モードを無効にしました<br>従来のスケジュールパターンを使用します";
-    
+  const message = taskLimit > 0
+    ? `😦 週次タスク上限を${taskLimit}件に設定しました<br>上限を超えるタスクは後続週に分散されます`
+    : "⚠️ 週次タスク上限を解除しました<br>従来のスケジュールパターンを使用します";
+
   showSuccessMessage(message);
 }
 
@@ -1479,66 +1563,76 @@ function onSmoothModeChange() {
 function showFirstWeekChangeMessage(previousValue, currentValue) {
   // 変更がない場合は表示しない
   if (previousValue === currentValue) return;
-  
+
   // スケジュール分析
   const meetings = generateMeetingsForPattern();
-  const weeklyTasks = meetings.map(m => m.meetingTasks.length + m.weekTasks.length);
+  const weeklyTasks = meetings.map(
+    (m) => m.meetingTasks.length + m.weekTasks.length
+  );
   const maxTasks = Math.max(...weeklyTasks);
-  const avgTasks = Math.round(weeklyTasks.reduce((sum, t) => sum + t, 0) / weeklyTasks.length);
-  
+  const avgTasks = Math.round(
+    weeklyTasks.reduce((sum, t) => sum + t, 0) / weeklyTasks.length
+  );
+
   // 最終週の状況
   const lastMeeting = meetings[meetings.length - 1];
-  const finalCompletionRate = Math.round((lastMeeting.progress.completed / scheduleData.pages.length) * 100);
-  
+  const finalCompletionRate = Math.round(
+    (lastMeeting.progress.completed / scheduleData.pages.length) * 100
+  );
+
   // メッセージ構築
   let html = `
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; margin: -20px -30px 15px -30px; border-radius: 8px 8px 0 0;">
-      <strong style="font-size: 18px;">✨ 第1週開始ページ数を更新しました</strong>
-    </div>
-  `;
-  
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; margin: -20px -30px 15px -30px; border-radius: 8px 8px 0 0;">
+        <strong style="font-size: 18px;">✨ 第1週開始ページ数を更新しました</strong>
+        </div>
+    `;
+
   // 変更内容
   html += `
-    <div style="margin-bottom: 15px;">
-      <strong style="color: #2c3e50;">📝 変更内容</strong><br>
-      <span style="color: #666;">第1週開始ページ数: ${previousValue} → ${currentValue} ${currentValue > previousValue ? `(+${currentValue - previousValue})` : `(${currentValue - previousValue})`}</span>
-    </div>
-  `;
-  
+        <div style="margin-bottom: 15px;">
+        <strong style="color: #2c3e50;">📝 変更内容</strong><br>
+        <span style="color: #666;">第1週開始ページ数: ${previousValue} → ${currentValue} ${
+    currentValue > previousValue
+      ? `(+${currentValue - previousValue})`
+      : `(${currentValue - previousValue})`
+  }</span>
+        </div>
+    `;
+
   // スケジュール影響
   html += `
-    <div style="margin-bottom: 15px;">
-      <strong style="color: #2c3e50;">📊 スケジュールへの影響</strong><br>
-      <span style="color: #666;">• 週平均タスク: ${avgTasks}件</span><br>
-      <span style="color: #666;">• 最大週次タスク: ${maxTasks}件</span><br>
-      <span style="color: #666;">• 完了率: ${finalCompletionRate}%</span>
-    </div>
-  `;
-  
+        <div style="margin-bottom: 15px;">
+        <strong style="color: #2c3e50;">📊 スケジュールへの影響</strong><br>
+        <span style="color: #666;">• 週平均タスク: ${avgTasks}件</span><br>
+        <span style="color: #666;">• 最大週次タスク: ${maxTasks}件</span><br>
+        <span style="color: #666;">• 完了率: ${finalCompletionRate}%</span>
+        </div>
+    `;
+
   // 警告やアドバイス
   if (finalCompletionRate < 100) {
     html += `
-      <div style="background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
-        <strong style="color: #856404;">⚠️ 警告</strong><br>
-        <span style="color: #856404;">現在の設定では納期までに完了できません。第1週の開始ページ数を増やすことをお勧めします。</span>
-      </div>
-    `;
+        <div style="background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+            <strong style="color: #856404;">⚠️ 警告</strong><br>
+            <span style="color: #856404;">現在の設定では納期までに完了できません。第1週の開始ページ数を増やすことをお勧めします。</span>
+        </div>
+        `;
   } else if (maxTasks > 40) {
     html += `
-      <div style="background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
-        <strong style="color: #856404;">💡 ヒント</strong><br>
-        <span style="color: #856404;">週次タスクが${maxTasks}件と高負荷です。第1週の開始ページ数を増やすと負荷が分散されます。</span>
-      </div>
-    `;
+        <div style="background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+            <strong style="color: #856404;">💡 ヒント</strong><br>
+            <span style="color: #856404;">週次タスクが${maxTasks}件と高負荷です。第1週の開始ページ数を増やすと負荷が分散されます。</span>
+        </div>
+        `;
   } else {
     html += `
-      <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
-        <strong style="color: #155724;">✅ 良好</strong><br>
-        <span style="color: #155724;">バランスの取れたスケジュールです。納期内に完了可能です。</span>
-      </div>
-    `;
+        <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+            <strong style="color: #155724;">✅ 良好</strong><br>
+            <span style="color: #155724;">バランスの取れたスケジュールです。納期内に完了可能です。</span>
+        </div>
+        `;
   }
-  
+
   // 既存のメッセージを削除
   const existingMessage = document.querySelector(".success-message");
   if (existingMessage) {
@@ -1549,34 +1643,34 @@ function showFirstWeekChangeMessage(previousValue, currentValue) {
   const messageDiv = document.createElement("div");
   messageDiv.className = "success-message";
   messageDiv.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: white;
-    color: #333;
-    padding: 20px 30px;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-    font-size: 14px;
-    z-index: 1000;
-    animation: slideIn 0.3s ease-out;
-    max-width: 400px;
-  `;
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        color: #333;
+        padding: 20px 30px;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        font-size: 14px;
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+        max-width: 400px;
+    `;
   messageDiv.innerHTML = html;
 
   // 閉じるボタンを追加
   const closeBtn = document.createElement("button");
   closeBtn.style.cssText = `
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: white;
-    opacity: 0.8;
-  `;
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: white;
+        opacity: 0.8;
+    `;
   closeBtn.innerHTML = "×";
   closeBtn.onclick = () => messageDiv.remove();
   messageDiv.appendChild(closeBtn);
@@ -1604,18 +1698,18 @@ function showSuccessMessage(message) {
   const messageDiv = document.createElement("div");
   messageDiv.className = "success-message";
   messageDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #27ae60;
-        color: white;
-        padding: 20px 30px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        font-size: 16px;
-        z-index: 1000;
-        animation: slideIn 0.3s ease-out;
-    `;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #27ae60;
+            color: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-size: 16px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        `;
   messageDiv.innerHTML = message;
 
   document.body.appendChild(messageDiv);
@@ -1645,33 +1739,45 @@ function showDetailedUpdateMessage(previousData, currentData) {
     const diff = currentData.pages.length - previousData.pages.length;
     changes.push({
       icon: diff > 0 ? "📄" : "📉",
-      text: `ページ数: ${previousData.pages.length} → ${currentData.pages.length} (${diff > 0 ? '+' : ''}${diff})`,
-      type: diff > 0 ? "increase" : "decrease"
+      text: `ページ数: ${previousData.pages.length} → ${
+        currentData.pages.length
+      } (${diff > 0 ? "+" : ""}${diff})`,
+      type: diff > 0 ? "increase" : "decrease",
     });
 
     // ページ数に関する警告
     if (currentData.pages.length > 50) {
-      warnings.push("ページ数が50を超えています。スケジュールが厳しくなる可能性があります。");
+      warnings.push(
+        "ページ数が50を超えています。スケジュールが厳しくなる可能性があります。"
+      );
     }
   }
 
   // 追加されたページを検出
-  const addedPages = currentData.pages.filter(page => !previousData.pages.includes(page));
+  const addedPages = currentData.pages.filter(
+    (page) => !previousData.pages.includes(page)
+  );
   if (addedPages.length > 0) {
     changes.push({
       icon: "➕",
-      text: `新規ページ: ${addedPages.slice(0, 3).join(", ")}${addedPages.length > 3 ? ` 他${addedPages.length - 3}件` : ""}`,
-      type: "added"
+      text: `新規ページ: ${addedPages.slice(0, 3).join(", ")}${
+        addedPages.length > 3 ? ` 他${addedPages.length - 3}件` : ""
+      }`,
+      type: "added",
     });
   }
 
   // 削除されたページを検出
-  const removedPages = previousData.pages.filter(page => !currentData.pages.includes(page));
+  const removedPages = previousData.pages.filter(
+    (page) => !currentData.pages.includes(page)
+  );
   if (removedPages.length > 0) {
     changes.push({
       icon: "➖",
-      text: `削除ページ: ${removedPages.slice(0, 3).join(", ")}${removedPages.length > 3 ? ` 他${removedPages.length - 3}件` : ""}`,
-      type: "removed"
+      text: `削除ページ: ${removedPages.slice(0, 3).join(", ")}${
+        removedPages.length > 3 ? ` 他${removedPages.length - 3}件` : ""
+      }`,
+      type: "removed",
     });
   }
 
@@ -1680,28 +1786,38 @@ function showDetailedUpdateMessage(previousData, currentData) {
     const diff = currentData.taskCycle.length - previousData.taskCycle.length;
     changes.push({
       icon: diff > 0 ? "🔧" : "⚡",
-      text: `工程数: ${previousData.taskCycle.length} → ${currentData.taskCycle.length} (${diff > 0 ? '+' : ''}${diff})`,
-      type: diff > 0 ? "increase" : "decrease"
+      text: `工程数: ${previousData.taskCycle.length} → ${
+        currentData.taskCycle.length
+      } (${diff > 0 ? "+" : ""}${diff})`,
+      type: diff > 0 ? "increase" : "decrease",
     });
   }
 
   // 追加された工程を検出
-  const addedTasks = currentData.taskCycle.filter(task => !previousData.taskCycle.includes(task));
+  const addedTasks = currentData.taskCycle.filter(
+    (task) => !previousData.taskCycle.includes(task)
+  );
   if (addedTasks.length > 0) {
     changes.push({
       icon: "🆕",
-      text: `新規工程: ${addedTasks.slice(0, 2).join(", ")}${addedTasks.length > 2 ? ` 他${addedTasks.length - 2}件` : ""}`,
-      type: "added"
+      text: `新規工程: ${addedTasks.slice(0, 2).join(", ")}${
+        addedTasks.length > 2 ? ` 他${addedTasks.length - 2}件` : ""
+      }`,
+      type: "added",
     });
   }
 
   // 削除された工程を検出
-  const removedTasks = previousData.taskCycle.filter(task => !currentData.taskCycle.includes(task));
+  const removedTasks = previousData.taskCycle.filter(
+    (task) => !currentData.taskCycle.includes(task)
+  );
   if (removedTasks.length > 0) {
     changes.push({
       icon: "🗑️",
-      text: `削除工程: ${removedTasks.slice(0, 2).join(", ")}${removedTasks.length > 2 ? ` 他${removedTasks.length - 2}件` : ""}`,
-      type: "removed"
+      text: `削除工程: ${removedTasks.slice(0, 2).join(", ")}${
+        removedTasks.length > 2 ? ` 他${removedTasks.length - 2}件` : ""
+      }`,
+      type: "removed",
     });
   }
 
@@ -1710,13 +1826,17 @@ function showDetailedUpdateMessage(previousData, currentData) {
     const diff = currentData.projectWeeks - previousData.projectWeeks;
     changes.push({
       icon: "📅",
-      text: `期間: ${previousData.projectWeeks}週 → ${currentData.projectWeeks}週 (${diff > 0 ? '+' : ''}${diff})`,
-      type: diff > 0 ? "increase" : "decrease"
+      text: `期間: ${previousData.projectWeeks}週 → ${
+        currentData.projectWeeks
+      }週 (${diff > 0 ? "+" : ""}${diff})`,
+      type: diff > 0 ? "increase" : "decrease",
     });
 
     // 期間に関する警告
     if (currentData.projectWeeks < 12 && currentData.pages.length > 20) {
-      warnings.push("プロジェクト期間が短く、ページ数が多いため、週あたりの負荷が高くなります。");
+      warnings.push(
+        "プロジェクト期間が短く、ページ数が多いため、週あたりの負荷が高くなります。"
+      );
     }
   }
 
@@ -1725,15 +1845,23 @@ function showDetailedUpdateMessage(previousData, currentData) {
     const diff = currentData.totalTasks - previousData.totalTasks;
     changes.push({
       icon: "📊",
-      text: `総タスク数: ${previousData.totalTasks} → ${currentData.totalTasks} (${diff > 0 ? '+' : ''}${diff})`,
-      type: diff > 0 ? "increase" : "decrease"
+      text: `総タスク数: ${previousData.totalTasks} → ${
+        currentData.totalTasks
+      } (${diff > 0 ? "+" : ""}${diff})`,
+      type: diff > 0 ? "increase" : "decrease",
     });
 
     // タスク数に関する警告と推奨事項
-    const avgTasksPerWeek = Math.ceil(currentData.totalTasks / currentData.projectWeeks);
+    const avgTasksPerWeek = Math.ceil(
+      currentData.totalTasks / currentData.projectWeeks
+    );
     if (avgTasksPerWeek > 40) {
-      warnings.push(`週平均${avgTasksPerWeek}タスクは高負荷です。チームの負担を考慮してください。`);
-      recommendations.push("プロジェクト期間の延長または段階的なリリースを検討してください。");
+      warnings.push(
+        `週平均${avgTasksPerWeek}タスクは高負荷です。チームの負担を考慮してください。`
+      );
+      recommendations.push(
+        "プロジェクト期間の延長または段階的なリリースを検討してください。"
+      );
     }
   }
 
@@ -1742,8 +1870,10 @@ function showDetailedUpdateMessage(previousData, currentData) {
     const diff = currentData.devTasks - previousData.devTasks;
     changes.push({
       icon: "💻",
-      text: `ecbeing側: ${previousData.devTasks} → ${currentData.devTasks} (${diff > 0 ? '+' : ''}${diff})`,
-      type: "dev"
+      text: `ecbeing側: ${previousData.devTasks} → ${currentData.devTasks} (${
+        diff > 0 ? "+" : ""
+      }${diff})`,
+      type: "dev",
     });
   }
 
@@ -1752,8 +1882,10 @@ function showDetailedUpdateMessage(previousData, currentData) {
     const diff = currentData.clientTasks - previousData.clientTasks;
     changes.push({
       icon: "👥",
-      text: `クライアント側: ${previousData.clientTasks} → ${currentData.clientTasks} (${diff > 0 ? '+' : ''}${diff})`,
-      type: "client"
+      text: `クライアント側: ${previousData.clientTasks} → ${
+        currentData.clientTasks
+      } (${diff > 0 ? "+" : ""}${diff})`,
+      type: "client",
     });
   }
 
@@ -1761,65 +1893,85 @@ function showDetailedUpdateMessage(previousData, currentData) {
   const devClientRatio = currentData.devTasks / currentData.clientTasks;
   if (devClientRatio > 3) {
     warnings.push("ecbeing側のタスクがクライアント側に比べて多すぎます。");
-    recommendations.push("クライアントの確認工程を適切に配置し、フィードバックの遅延を防ぎましょう。");
+    recommendations.push(
+      "クライアントの確認工程を適切に配置し、フィードバックの遅延を防ぎましょう。"
+    );
   }
 
   // 第1週の開始ページ数を取得して評価
-  const firstWeekPages = parseInt(document.getElementById("firstWeekPages").value) || 7;
+  const firstWeekPages =
+    parseInt(document.getElementById("firstWeekPages").value) || 7;
   const avgPagesPerWeek = currentData.pages.length / currentData.projectWeeks;
   if (firstWeekPages < avgPagesPerWeek * 0.5) {
-    recommendations.push(`第1週の開始ページ数（${firstWeekPages}）を増やすことで、後半の負荷を軽減できます。`);
+    recommendations.push(
+      `第1週の開始ページ数（${firstWeekPages}）を増やすことで、後半の負荷を軽減できます。`
+    );
   }
 
   // 実際のスケジュールから週次負荷を分析
   const meetings = generateMeetingsForPattern();
-  const weeklyTaskCounts = meetings.map(meeting => 
-    meeting.meetingTasks.length + meeting.weekTasks.length
+  const weeklyTaskCounts = meetings.map(
+    (meeting) => meeting.meetingTasks.length + meeting.weekTasks.length
   );
   const maxWeeklyTasks = Math.max(...weeklyTaskCounts);
   const peakWeeks = meetings
-    .map((meeting, index) => ({ week: index + 1, tasks: weeklyTaskCounts[index] }))
-    .filter(week => week.tasks === maxWeeklyTasks);
+    .map((meeting, index) => ({
+      week: index + 1,
+      tasks: weeklyTaskCounts[index],
+    }))
+    .filter((week) => week.tasks === maxWeeklyTasks);
 
   if (maxWeeklyTasks > 50) {
-    warnings.push(`第${peakWeeks[0].week}週に${maxWeeklyTasks}タスクのピークがあります。負荷分散を検討してください。`);
+    warnings.push(
+      `第${peakWeeks[0].week}週に${maxWeeklyTasks}タスクのピークがあります。負荷分散を検討してください。`
+    );
   }
 
   // 最終週の完了状況を確認
   const lastMeeting = meetings[meetings.length - 1];
-  const finalCompletionRate = Math.round((lastMeeting.progress.completed / currentData.pages.length) * 100);
-  
+  const finalCompletionRate = Math.round(
+    (lastMeeting.progress.completed / currentData.pages.length) * 100
+  );
+
   if (finalCompletionRate < 100) {
-    const unfinishedPages = lastMeeting.progress.inProgress + lastMeeting.progress.notStarted;
-    warnings.push(`現在の設定では納期までに完了できません（最終完了率: ${finalCompletionRate}%）`);
-    recommendations.push(`第1週の開始ページ数を${Math.min(10, firstWeekPages + 2)}以上に増やすか、プロジェクト期間を延長してください。`);
+    const unfinishedPages =
+      lastMeeting.progress.inProgress + lastMeeting.progress.notStarted;
+    warnings.push(
+      `現在の設定では納期までに完了できません（最終完了率: ${finalCompletionRate}%）`
+    );
+    recommendations.push(
+      `第1週の開始ページ数を${Math.min(
+        10,
+        firstWeekPages + 2
+      )}以上に増やすか、プロジェクト期間を延長してください。`
+    );
   }
 
   // メッセージを作成
   const messageDiv = document.createElement("div");
   messageDiv.className = "update-message";
   messageDiv.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    max-width: 450px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-    z-index: 1000;
-    animation: slideIn 0.3s ease-out;
-    overflow: hidden;
-  `;
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        max-width: 450px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+        overflow: hidden;
+    `;
 
   // ヘッダー
   const header = document.createElement("div");
   header.style.cssText = `
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 15px 20px;
-    font-weight: bold;
-    font-size: 16px;
-  `;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        font-weight: bold;
+        font-size: 16px;
+    `;
   header.innerHTML = "✨ プロジェクトデータを更新しました";
 
   // コンテンツ
@@ -1831,14 +1983,18 @@ function showDetailedUpdateMessage(previousData, currentData) {
     const changesSection = document.createElement("div");
     changesSection.style.cssText = "margin-bottom: 15px;";
     changesSection.innerHTML = `
-      <div style="font-weight: 600; color: #2c3e50; margin-bottom: 10px; font-size: 14px;">📝 変更内容</div>
-      ${changes.map(change => `
-        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 0; font-size: 13px; color: #495057;">
-          <span style="font-size: 16px;">${change.icon}</span>
-          <span>${change.text}</span>
-        </div>
-      `).join('')}
-    `;
+        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 10px; font-size: 14px;">📝 変更内容</div>
+        ${changes
+          .map(
+            (change) => `
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px 0; font-size: 13px; color: #495057;">
+            <span style="font-size: 16px;">${change.icon}</span>
+            <span>${change.text}</span>
+            </div>
+        `
+          )
+          .join("")}
+        `;
     content.appendChild(changesSection);
   }
 
@@ -1846,18 +2002,22 @@ function showDetailedUpdateMessage(previousData, currentData) {
   if (warnings.length > 0) {
     const warningsSection = document.createElement("div");
     warningsSection.style.cssText = `
-      background: #fff3cd;
-      border: 1px solid #ffeeba;
-      border-radius: 6px;
-      padding: 12px;
-      margin-bottom: 15px;
-    `;
+        background: #fff3cd;
+        border: 1px solid #ffeeba;
+        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 15px;
+        `;
     warningsSection.innerHTML = `
-      <div style="font-weight: 600; color: #856404; margin-bottom: 8px; font-size: 14px;">⚠️ 警告</div>
-      ${warnings.map(warning => `
-        <div style="font-size: 12px; color: #856404; margin-bottom: 4px;">• ${warning}</div>
-      `).join('')}
-    `;
+        <div style="font-weight: 600; color: #856404; margin-bottom: 8px; font-size: 14px;">⚠️ 警告</div>
+        ${warnings
+          .map(
+            (warning) => `
+            <div style="font-size: 12px; color: #856404; margin-bottom: 4px;">• ${warning}</div>
+        `
+          )
+          .join("")}
+        `;
     content.appendChild(warningsSection);
   }
 
@@ -1865,47 +2025,51 @@ function showDetailedUpdateMessage(previousData, currentData) {
   if (recommendations.length > 0) {
     const recommendationsSection = document.createElement("div");
     recommendationsSection.style.cssText = `
-      background: #d1ecf1;
-      border: 1px solid #bee5eb;
-      border-radius: 6px;
-      padding: 12px;
-    `;
+        background: #d1ecf1;
+        border: 1px solid #bee5eb;
+        border-radius: 6px;
+        padding: 12px;
+        `;
     recommendationsSection.innerHTML = `
-      <div style="font-weight: 600; color: #0c5460; margin-bottom: 8px; font-size: 14px;">💡 推奨事項</div>
-      ${recommendations.map(rec => `
-        <div style="font-size: 12px; color: #0c5460; margin-bottom: 4px;">• ${rec}</div>
-      `).join('')}
-    `;
+        <div style="font-weight: 600; color: #0c5460; margin-bottom: 8px; font-size: 14px;">💡 推奨事項</div>
+        ${recommendations
+          .map(
+            (rec) => `
+            <div style="font-size: 12px; color: #0c5460; margin-bottom: 4px;">• ${rec}</div>
+        `
+          )
+          .join("")}
+        `;
     content.appendChild(recommendationsSection);
   }
 
   // 変更がない場合
   if (changes.length === 0) {
     content.innerHTML = `
-      <div style="text-align: center; padding: 20px; color: #6c757d;">
-        <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
-        <div style="font-size: 14px;">データは正常に更新されました</div>
-      </div>
-    `;
+        <div style="text-align: center; padding: 20px; color: #6c757d;">
+            <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+            <div style="font-size: 14px;">データは正常に更新されました</div>
+        </div>
+        `;
   }
 
   // 閉じるボタン
   const closeButton = document.createElement("button");
   closeButton.style.cssText = `
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background: none;
-    border: none;
-    color: white;
-    font-size: 20px;
-    cursor: pointer;
-    opacity: 0.8;
-    transition: opacity 0.2s;
-  `;
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+    `;
   closeButton.innerHTML = "×";
-  closeButton.onmouseover = () => closeButton.style.opacity = "1";
-  closeButton.onmouseout = () => closeButton.style.opacity = "0.8";
+  closeButton.onmouseover = () => (closeButton.style.opacity = "1");
+  closeButton.onmouseout = () => (closeButton.style.opacity = "0.8");
   closeButton.onclick = () => {
     messageDiv.style.animation = "slideOut 0.3s ease-out";
     setTimeout(() => messageDiv.remove(), 300);
@@ -1917,7 +2081,8 @@ function showDetailedUpdateMessage(previousData, currentData) {
   document.body.appendChild(messageDiv);
 
   // 自動的に削除（変更や警告がある場合は長めに表示）
-  const displayTime = (warnings.length > 0 || recommendations.length > 0) ? 8000 : 5000;
+  const displayTime =
+    warnings.length > 0 || recommendations.length > 0 ? 8000 : 5000;
   setTimeout(() => {
     if (document.contains(messageDiv)) {
       messageDiv.style.animation = "slideOut 0.3s ease-out";
@@ -1954,10 +2119,10 @@ function updateStats() {
   // ecbeing側とクライアント側のタスク数を動的に計算
   const pages = scheduleData.pages || [];
   const taskCycle = scheduleData.taskCycle || [];
-  
+
   let totalDevTasks = 0;
   let totalClientTasks = 0;
-  
+
   taskCycle.forEach((task) => {
     const taskType = getTaskType(task);
     if (taskType === "dev") {
@@ -1980,14 +2145,14 @@ function updateStats() {
   );
   if (finalStats) {
     finalStats.innerHTML = `
-            <strong>総タスク数: 630件</strong><br>
-            全35ページ × 18工程 = 630件<br>
-            ecbeing側: ${totalDevTasks}件 | クライアント側: ${totalClientTasks}件<br>
-            進捗率: 100%（プロジェクト完了）<br>
-            最大週次タスク数: ${maxTasks}件<br>
-            平均週次タスク数: ${avgTasks}件<br>
-            納期: 2025/11/03(月) - 達成<br>
-            全工程完了: 2025/11/12(水)
-        `;
+                <strong>総タスク数: 630件</strong><br>
+                全35ページ × 18工程 = 630件<br>
+                ecbeing側: ${totalDevTasks}件 | クライアント側: ${totalClientTasks}件<br>
+                進捗率: 100%（プロジェクト完了）<br>
+                最大週次タスク数: ${maxTasks}件<br>
+                平均週次タスク数: ${avgTasks}件<br>
+                納期: 2025/11/03(月) - 達成<br>
+                全工程完了: 2025/11/12(水)
+            `;
   }
 }

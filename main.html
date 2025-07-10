@@ -463,15 +463,17 @@ PC/SPコーディング修正版提出&確認確定</textarea>
             </div>
             
             <div style="margin-top: 15px; padding: 15px; background: #f0f4f8; border-radius: 8px;">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="smoothMode" checked onchange="onSmoothModeChange()" style="width: 18px; height: 18px; cursor: pointer;">
-                    <span style="font-weight: 600; color: #34495e;">
-                        📊 タスク平準化モード
-                        <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">（週次タスクを15-20件に調整）</span>
-                    </span>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #34495e;">
+                    🚦 週次タスク上限設定
+                    <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">（0 = 制限なし）</span>
                 </label>
-                <p style="margin: 8px 0 0 28px; font-size: 13px; color: #666; line-height: 1.5;">
-                    有効にすると、週次タスク数の変動を抑え、安定した作業負荷を維持します。
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <input type="number" id="taskLimit" min="0" max="50" value="0" onchange="onTaskLimitChange()" style="width: 100px; padding: 8px; border: 2px solid #e0e0e0; border-radius: 4px; font-size: 16px; text-align: center;">
+                    <span style="font-size: 14px; color: #666;">タスク/週</span>
+                    <span style="font-size: 12px; color: #999;">（推奨: 15-20）</span>
+                </div>
+                <p style="margin: 8px 0 0 0; font-size: 13px; color: #666; line-height: 1.5;">
+                    週あたりのecbeing側タスク数に上限を設定します。上限を超える場合は自動的に後続週に分散されます。
                 </p>
             </div>
         </div>
