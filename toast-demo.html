@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Toast Notification Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            padding: 40px;
+            background: #f5f5f5;
+        }
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .demo-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        button {
+            padding: 12px 24px;
+            margin: 5px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>🎉 Enhanced Toast Notification Demo</h1>
+        
+        <div class="demo-section">
+            <h2>通常の更新（変更なし）</h2>
+            <p>データに変更がない場合のシンプルな成功メッセージ</p>
+            <button class="btn-primary" onclick="showNoChanges()">表示</button>
+        </div>
+
+        <div class="demo-section">
+            <h2>小規模な変更</h2>
+            <p>ページ数と工程数の変更のみ</p>
+            <button class="btn-primary" onclick="showSmallChanges()">表示</button>
+        </div>
+
+        <div class="demo-section">
+            <h2>警告あり</h2>
+            <p>高負荷や納期問題の警告を含む</p>
+            <button class="btn-warning" onclick="showWithWarnings()">表示</button>
+        </div>
+
+        <div class="demo-section">
+            <h2>詳細な変更と推奨事項</h2>
+            <p>ページ追加/削除、工程変更、警告、推奨事項すべて含む</p>
+            <button class="btn-danger" onclick="showFullDetailed()">表示</button>
+        </div>
+    </div>
+
+    <script>
+        // Toast表示関数
+        function showDetailedUpdateMessage(previousData, currentData, changes, warnings, recommendations) {
+            const existingMessage = document.querySelector(".update-message");
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
+            const messageDiv = document.createElement("div");
+            messageDiv.className = "update-message";
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                max-width: 450px;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+                z-index: 1000;
+                animation: slideIn 0.3s ease-out;
+                overflow: hidden;
+            `;
+
+            const header = document.createElement("div");
+            header.style.cssText = `
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 15px 20px;
+                font-weight: bold;
+                font-size: 16px;
+            `;
+            header.innerHTML = "✨ プロジェクトデータを更新しました";
+
+            const content = document.createElement("div");
+            content.style.cssText = "padding: 20px;";
+
+            if (changes.length > 0) {
+                const changesSection = document.createElement("div");
+                changesSection.style.cssText = "margin-bottom: 15px;";
+                changesSection.innerHTML = `
+                    <div style="font-weight: 600; color: #2c3e50; margin-bottom: 10px; font-size: 14px;">📝 変更内容</div>
+                    ${changes.map(change => `
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 0; font-size: 13px; color: #495057;">
+                            <span style="font-size: 16px;">${change.icon}</span>
+                            <span>${change.text}</span>
+                        </div>
+                    `).join('')}
+                `;
+                content.appendChild(changesSection);
+            }
+
+            if (warnings.length > 0) {
+                const warningsSection = document.createElement("div");
+                warningsSection.style.cssText = `
+                    background: #fff3cd;
+                    border: 1px solid #ffeeba;
+                    border-radius: 6px;
+                    padding: 12px;
+                    margin-bottom: 15px;
+                `;
+                warningsSection.innerHTML = `
+                    <div style="font-weight: 600; color: #856404; margin-bottom: 8px; font-size: 14px;">⚠️ 警告</div>
+                    ${warnings.map(warning => `
+                        <div style="font-size: 12px; color: #856404; margin-bottom: 4px;">• ${warning}</div>
+                    `).join('')}
+                `;
+                content.appendChild(warningsSection);
+            }
+
+            if (recommendations.length > 0) {
+                const recommendationsSection = document.createElement("div");
+                recommendationsSection.style.cssText = `
+                    background: #d1ecf1;
+                    border: 1px solid #bee5eb;
+                    border-radius: 6px;
+                    padding: 12px;
+                `;
+                recommendationsSection.innerHTML = `
+                    <div style="font-weight: 600; color: #0c5460; margin-bottom: 8px; font-size: 14px;">💡 推奨事項</div>
+                    ${recommendations.map(rec => `
+                        <div style="font-size: 12px; color: #0c5460; margin-bottom: 4px;">• ${rec}</div>
+                    `).join('')}
+                `;
+                content.appendChild(recommendationsSection);
+            }
+
+            if (changes.length === 0) {
+                content.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #6c757d;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+                        <div style="font-size: 14px;">データは正常に更新されました</div>
+                    </div>
+                `;
+            }
+
+            const closeButton = document.createElement("button");
+            closeButton.style.cssText = `
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: none;
+                border: none;
+                color: white;
+                font-size: 20px;
+                cursor: pointer;
+                opacity: 0.8;
+                transition: opacity 0.2s;
+            `;
+            closeButton.innerHTML = "×";
+            closeButton.onmouseover = () => closeButton.style.opacity = "1";
+            closeButton.onmouseout = () => closeButton.style.opacity = "0.8";
+            closeButton.onclick = () => {
+                messageDiv.style.animation = "slideOut 0.3s ease-out";
+                setTimeout(() => messageDiv.remove(), 300);
+            };
+
+            header.appendChild(closeButton);
+            messageDiv.appendChild(header);
+            messageDiv.appendChild(content);
+            document.body.appendChild(messageDiv);
+
+            const displayTime = (warnings.length > 0 || recommendations.length > 0) ? 8000 : 5000;
+            setTimeout(() => {
+                if (document.contains(messageDiv)) {
+                    messageDiv.style.animation = "slideOut 0.3s ease-out";
+                    setTimeout(() => messageDiv.remove(), 300);
+                }
+            }, displayTime);
+        }
+
+        // デモ関数
+        function showNoChanges() {
+            showDetailedUpdateMessage({}, {}, [], [], []);
+        }
+
+        function showSmallChanges() {
+            const changes = [
+                { icon: "📄", text: "ページ数: 30 → 35 (+5)" },
+                { icon: "🔧", text: "工程数: 8 → 9 (+1)" },
+                { icon: "📊", text: "総タスク数: 240 → 315 (+75)" }
+            ];
+            showDetailedUpdateMessage({}, {}, changes, [], []);
+        }
+
+        function showWithWarnings() {
+            const changes = [
+                { icon: "📄", text: "ページ数: 35 → 55 (+20)" },
+                { icon: "📅", text: "期間: 18週 → 12週 (-6)" },
+                { icon: "📊", text: "総タスク数: 315 → 495 (+180)" }
+            ];
+            const warnings = [
+                "ページ数が50を超えています。スケジュールが厳しくなる可能性があります。",
+                "週平均41タスクは高負荷です。チームの負担を考慮してください。",
+                "第8週に65タスクのピークがあります。負荷分散を検討してください。"
+            ];
+            const recommendations = [
+                "プロジェクト期間の延長または段階的なリリースを検討してください。",
+                "第1週の開始ページ数（3）を増やすことで、後半の負荷を軽減できます。"
+            ];
+            showDetailedUpdateMessage({}, {}, changes, warnings, recommendations);
+        }
+
+        function showFullDetailed() {
+            const changes = [
+                { icon: "📄", text: "ページ数: 30 → 35 (+5)" },
+                { icon: "➕", text: "新規ページ: 商品詳細, カート, 決済画面 他2件" },
+                { icon: "🔧", text: "工程数: 8 → 9 (+1)" },
+                { icon: "🆕", text: "新規工程: テスト実施" },
+                { icon: "📅", text: "期間: 20週 → 18週 (-2)" },
+                { icon: "📊", text: "総タスク数: 240 → 315 (+75)" },
+                { icon: "💻", text: "ecbeing側: 180 → 245 (+65)" },
+                { icon: "👥", text: "クライアント側: 60 → 70 (+10)" }
+            ];
+            const warnings = [
+                "ecbeing側のタスクがクライアント側に比べて多すぎます。",
+                "現在の設定では納期までに完了できません（最終完了率: 92%）"
+            ];
+            const recommendations = [
+                "クライアントの確認工程を適切に配置し、フィードバックの遅延を防ぎましょう。",
+                "第1週の開始ページ数を9以上に増やすか、プロジェクト期間を延長してください。"
+            ];
+            showDetailedUpdateMessage({}, {}, changes, warnings, recommendations);
+        }
+    </script>
+</body>
+</html>
