@@ -25,6 +25,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // 初期日付を設定
   updateScheduleDates();
 
+  // プロジェクト期間を計算・更新
+  updateProjectWeeks();
+  
   // スケジュール達成可能性をチェック
   checkScheduleFeasibility();
 
@@ -96,21 +99,133 @@ function drawTaskChart() {
   canvas.width = canvas.offsetWidth;
   canvas.height = 400;
 
-  // ecbeing側のタスク数を計算
-  const meetings = generateMeetingsForPattern();
-  const weeklyDevTasks = meetings.map((meeting, index) => {
-    let devCount = 0;
-    meeting.meetingTasks.forEach((task) => {
-      const taskType = getTaskType(task.process);
-      if (taskType === "dev" || taskType === "both") devCount++;
+  // タスク上限を取得
+  const taskLimit = parseInt(document.getElementById("taskLimit")?.value) || 0;
+  const firstWeekPages = parseInt(document.getElementById("firstWeekPages")?.value) || 7;
+  const totalPages = scheduleData.pages.length;
+  const totalWeeks = scheduleData.projectWeeks || 18;
+
+  // タスク上限が設定されている場合は最適化されたページ配分を使用
+  let pagesPerWeek;
+  if (taskLimit > 0) {
+    pagesPerWeek = optimizePageDistribution(totalPages, totalWeeks, firstWeekPages, taskLimit);
+  } else {
+    // 既存のロジックでページ配分を計算
+    const meetings = generateMeetingsForPattern();
+    const weeklyDevTasks = meetings.map((meeting, index) => {
+      let devCount = 0;
+      meeting.meetingTasks.forEach((task) => {
+        const taskType = getTaskType(task.process);
+        if (taskType === "dev" || taskType === "both") devCount++;
+      });
+      meeting.weekTasks.forEach((task) => {
+        const taskType = getTaskType(task.process);
+        if (taskType === "dev" || taskType === "both") devCount++;
+      });
+      return {
+        week: index + 1,
+        tasks: devCount,
+        meeting: scheduleData.weeklyTasks[index].meeting,
+        date: scheduleData.weeklyTasks[index].date,
+      };
     });
-    meeting.weekTasks.forEach((task) => {
-      const taskType = getTaskType(task.process);
-      if (taskType === "dev" || taskType === "both") devCount++;
+    
+    const data = weeklyDevTasks;
+    const maxTasks = Math.max(...data.map((d) => d.tasks));
+    const padding = 60;
+    const chartWidth = canvas.width - 2 * padding;
+    const chartHeight = canvas.height - 2 * padding;
+    const barWidth = (chartWidth / data.length) * 0.6;
+    const spacing = chartWidth / data.length;
+
+    // 背景
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // グリッド線とY軸ラベル
+    ctx.strokeStyle = "#e0e0e0";
+    ctx.lineWidth = 1;
+    ctx.font = "12px Arial";
+    ctx.fillStyle = "#666";
+
+    for (let i = 0; i <= 5; i++) {
+      const y = padding + (chartHeight / 5) * i;
+      const value = Math.round((maxTasks * (5 - i)) / 5);
+
+      // グリッド線
+      ctx.beginPath();
+      ctx.moveTo(padding, y);
+      ctx.lineTo(canvas.width - padding, y);
+      ctx.stroke();
+
+      // Y軸ラベル
+      ctx.textAlign = "right";
+      ctx.fillText(value, padding - 10, y + 4);
+    }
+
+    // バーを描画
+    data.forEach((d, index) => {
+      const barHeight = (d.tasks / maxTasks) * chartHeight;
+      const x = padding + index * spacing + (spacing - barWidth) / 2;
+      const y = padding + chartHeight - barHeight;
+
+      // バー
+      ctx.fillStyle = "#5B9BD5";
+      ctx.fillRect(x, y, barWidth, barHeight);
+
+      // 値ラベル
+      ctx.fillStyle = "#333";
+      ctx.textAlign = "center";
+      ctx.font = "bold 14px Arial";
+      ctx.fillText(d.tasks, x + barWidth / 2, y - 5);
+
+      // ピーク値の強調
+      if (d.tasks === maxTasks) {
+        ctx.fillStyle = "#e74c3c";
+        ctx.fillText(`ピーク時`, x + barWidth / 2, y - 25);
+        ctx.fillText(`${d.tasks}`, x + barWidth / 2, y - 5);
+      }
+
+      // X軸ラベル
+      ctx.fillStyle = "#666";
+      ctx.font = "11px Arial";
+      ctx.save();
+      ctx.translate(x + barWidth / 2, padding + chartHeight + 15);
+      ctx.rotate(-Math.PI / 4);
+      ctx.textAlign = "right";
+      ctx.fillText(d.meeting, 0, 0);
+      ctx.restore();
     });
+
+    // タイトル
+    ctx.fillStyle = "#333";
+    ctx.font = "bold 16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(
+      "週次ecbeing側タスク数",
+      canvas.width / 2,
+      canvas.height - 10
+    );
+
+    // 最大週次タスク数の表示を更新
+    const peakTasks = Math.max(...data.map((d) => d.tasks));
+    const peakTaskElement = document.querySelector(
+      ".stat-card:nth-child(4) .stat-value"
+    );
+    if (peakTaskElement) {
+      peakTaskElement.textContent = peakTasks;
+    }
+    
+    return;
+  }
+  
+  // タスク上限が設定されている場合、simulateWeeklyTasksを使用して正確な週次タスク数を計算
+  const weeklyTasks = simulateWeeklyTasks(pagesPerWeek, totalWeeks, scheduleData.taskCycle.length);
+  
+  const weeklyDevTasks = weeklyTasks.map((tasks, index) => {
     return {
       week: index + 1,
-      tasks: devCount,
+      tasks: tasks,
       meeting: scheduleData.weeklyTasks[index].meeting,
       date: scheduleData.weeklyTasks[index].date,
     };
@@ -186,6 +301,15 @@ function drawTaskChart() {
   ctx.font = "14px Arial";
   ctx.textAlign = "center";
   ctx.fillText("週次ecbeing側タスク数", canvas.width / 2, canvas.height - 10);
+  
+  // 最大週次タスク数の表示を更新
+  const peakTasks = Math.max(...data.map((d) => d.tasks));
+  const peakTaskElement = document.querySelector(
+    ".stat-card:nth-child(4) .stat-value"
+  );
+  if (peakTaskElement) {
+    peakTaskElement.textContent = peakTasks;
+  }
 }
 
 // スケジュールの表示
@@ -217,14 +341,17 @@ function displaySchedule() {
   const finalCompletionRate = Math.round((finalCompleted / finalTotal) * 100);
 
   const finalStats = document.createElement("div");
-  finalStats.className = "meeting-section";
+  finalStats.className = "project-summary-sticky";
   finalStats.style.cssText = `
+            position: sticky;
+            bottom: 0;
             margin-top: 40px;
             border: none;
-            border-radius: 12px;
+            border-radius: 12px 12px 0 0;
             overflow: hidden;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            box-shadow: 0 -4px 16px rgba(0,0,0,0.15);
+            z-index: 1000;
         `;
 
   const statsHeader = document.createElement("div");
@@ -240,7 +367,9 @@ function displaySchedule() {
   const statsContent = document.createElement("div");
   statsContent.style.cssText = `
             background: white;
-            padding: 30px;
+            padding: 20px 30px 30px;
+            max-height: 300px;
+            overflow-y: auto;
         `;
 
   const statsGrid = document.createElement("div");
@@ -353,6 +482,85 @@ function displaySchedule() {
   container.appendChild(finalStats);
 }
 
+// プロジェクト期間を更新する関数
+function updateProjectWeeks() {
+  const totalPages = scheduleData.pages.length;
+  const firstWeekPages = parseInt(document.getElementById("firstWeekPages")?.value) || 7;
+  const taskLimit = parseInt(document.getElementById("taskLimit")?.value) || 0;
+  
+  // 必要な週数を計算
+  const requiredWeeks = calculateRequiredWeeks(totalPages, firstWeekPages, taskLimit);
+  
+  // scheduleData.projectWeeksを更新
+  scheduleData.projectWeeks = requiredWeeks;
+  
+  // 表示を更新
+  const calculatedWeeksElement = document.getElementById("calculatedWeeks");
+  if (calculatedWeeksElement) {
+    calculatedWeeksElement.textContent = requiredWeeks;
+  }
+  
+  // 統計情報も更新
+  const weekCountElements = document.querySelectorAll("#overview-week-count");
+  weekCountElements.forEach(element => {
+    element.textContent = requiredWeeks;
+  });
+  
+  // プロジェクト期間の表示を更新
+  const projectWeeksElement = document.querySelector(".stat-card:nth-child(2) .stat-value");
+  if (projectWeeksElement) {
+    projectWeeksElement.textContent = requiredWeeks;
+  }
+  
+  // 週次タスクデータも更新
+  updateScheduleDates();
+}
+
+// 必要なプロジェクト期間を計算する関数
+function calculateRequiredWeeks(totalPages, firstWeekPages, taskLimit) {
+  const weeksPerPageCompletion = 9; // 1ページ完了に必要な週数
+  
+  // タスク上限が設定されていない場合
+  if (!taskLimit || taskLimit === 0) {
+    // デフォルトの期間（18週間）または最小必要週数のいずれか大きい方
+    return Math.max(18, weeksPerPageCompletion + Math.ceil(totalPages / 4));
+  }
+  
+  // タスク上限が設定されている場合のシミュレーション
+  let testWeeks = weeksPerPageCompletion + 1; // 最小必要週数から開始
+  const maxWeeks = 52; // 最大52週間まで試行
+  
+  while (testWeeks <= maxWeeks) {
+    // この週数でページ配分を試みる
+    const distribution = optimizePageDistribution(totalPages, testWeeks, firstWeekPages, taskLimit);
+    const totalDistributed = distribution.reduce((sum, pages) => sum + pages, 0);
+    
+    // 全ページが配分できた場合
+    if (totalDistributed >= totalPages) {
+      // 最後のページが完了するまでの時間を確認
+      let lastPageStartWeek = 0;
+      for (let i = distribution.length - 1; i >= 0; i--) {
+        if (distribution[i] > 0) {
+          lastPageStartWeek = i;
+          break;
+        }
+      }
+      
+      // 最後のページが完了するのに必要な週数
+      const requiredWeeks = lastPageStartWeek + weeksPerPageCompletion;
+      
+      if (requiredWeeks <= testWeeks) {
+        return testWeeks;
+      }
+    }
+    
+    testWeeks++;
+  }
+  
+  // 52週間でも収まらない場合は52週間を返す
+  return maxWeeks;
+}
+
 // タスク上限を考慮したページ配分最適化関数
 function optimizePageDistribution(
   totalPages,
@@ -383,31 +591,41 @@ function optimizePageDistribution(
   }
   
   // タスク上限が設定されている場合
-  // まず各週のタスク数をシミュレートしながら配分
+  // 各週のタスク数をシミュレートして正確な配分を計算
   const pageStates = [];
   
   // 第1週のページを追加
   for (let i = 0; i < firstWeekPages; i++) {
     pageStates.push({
       startWeek: 0,
-      currentStage: 0,
-      phase: 0
+      currentPhase: 0,
+      completedPhases: 0
     });
   }
   
   // 残りのページを順次追加
   for (let week = 1; week < totalWeeks && remaining > 0; week++) {
-    // 現在週のecbeingタスク数を計算
+    // 現在週のecbeingタスク数を正確に計算
     let weekTasks = 0;
     
     // 既存ページのタスクをカウント
     pageStates.forEach(page => {
       const weeksSinceStart = week - page.startWeek;
-      const phaseWeek = weeksSinceStart - page.phase * 3;
       
-      if (page.phase < 3 && phaseWeek >= 0 && phaseWeek < 3) {
-        if (phaseWeek === 0 || phaseWeek === 2) {
-          weekTasks++; // 提出または修正版提出
+      // 各フェーズ（PC、SP、コーディング）は3週間
+      // 0週目: 提出（ecbeingタスク）
+      // 1週目: 修正依頼（クライアントタスク）
+      // 2週目: 修正版提出（ecbeingタスク）
+      for (let phase = 0; phase < 3; phase++) {
+        const phaseStartWeek = phase * 3;
+        const weekInPhase = weeksSinceStart - phaseStartWeek;
+        
+        if (weekInPhase === 0 || weekInPhase === 2) {
+          // 提出週または修正版提出週
+          if (weekInPhase >= 0 && page.completedPhases <= phase) {
+            weekTasks++;
+            break; // 1ページは1週間に1タスクのみ
+          }
         }
       }
     });
@@ -415,28 +633,20 @@ function optimizePageDistribution(
     // 上限に余裕があれば新規ページを追加
     let newPages = 0;
     while (remaining > 0 && weekTasks + newPages < taskLimit) {
-      newPages++;
-      remaining--;
-      
       pageStates.push({
         startWeek: week,
-        currentStage: 0,
-        phase: 0
+        currentPhase: 0,
+        completedPhases: 0
       });
       
-      // 新規ページの第1週目は1タスク追加
-      if (weekTasks + newPages >= taskLimit) break;
+      newPages++;
+      remaining--;
+      weekTasks++; // 新規ページの第1週目は必ず1タスク
+      
+      if (weekTasks >= taskLimit) break;
     }
     
     distribution[week] = newPages;
-    
-    // ページのフェーズを更新
-    pageStates.forEach(page => {
-      const weeksSinceStart = week - page.startWeek;
-      if (weeksSinceStart > 0 && (weeksSinceStart - 1) % 3 === 2) {
-        page.phase++;
-      }
-    });
   }
   
   // 残りのページがある場合は警告
@@ -1160,6 +1370,9 @@ function onFirstWeekPagesChange() {
     .getElementById("firstWeekPages")
     .setAttribute("data-previous", firstWeekPages);
 
+  // プロジェクト期間を再計算
+  updateProjectWeeks();
+  
   // スケジュール達成可能性をチェック
   checkScheduleFeasibility();
 
@@ -1331,16 +1544,7 @@ function updateProjectData() {
     ),
   };
 
-  // プロジェクト週数を取得
-  const projectWeeks =
-    parseInt(document.getElementById("projectWeeks").value) || 18;
-
-  // 週数の検証
-  if (projectWeeks < 8 || projectWeeks > 52) {
-    alert("プロジェクト期間は8〜52週間の範囲で設定してください。");
-    document.getElementById("projectWeeks").value = 18;
-    return;
-  }
+  // プロジェクト週数は後で自動計算される
 
   // ページ一覧を取得
   const pageListText = document.getElementById("pageList").value;
@@ -1359,10 +1563,12 @@ function updateProjectData() {
   // データを更新
   scheduleData.pages = pages;
   scheduleData.taskCycle = taskCycle;
-  scheduleData.projectWeeks = projectWeeks; // プロジェクト週数を保存
-
-  // ミーティングデータを再生成
-  regenerateMeetingData(pages, taskCycle, projectWeeks);
+  
+  // プロジェクト期間を自動計算
+  updateProjectWeeks();
+  
+  // ミーティングデータを再生成（更新されたprojectWeeksを使用）
+  regenerateMeetingData(pages, taskCycle, scheduleData.projectWeeks);
 
   // ページ数を更新
   document.querySelector(".stat-card:nth-child(1) .stat-value").textContent =
@@ -1405,7 +1611,7 @@ function updateProjectData() {
   const currentData = {
     pages: pages,
     taskCycle: taskCycle,
-    projectWeeks: projectWeeks,
+    projectWeeks: scheduleData.projectWeeks,
     totalTasks: totalTasks,
     devTasks: devTasks,
     clientTasks: clientTasks,
@@ -1481,8 +1687,7 @@ function onStartDateChange() {
 function updateScheduleDates() {
   const startDateInput = document.getElementById("projectStartDate");
   const startDate = new Date(startDateInput.value);
-  const projectWeeks =
-    parseInt(document.getElementById("projectWeeks").value) || 18;
+  const projectWeeks = scheduleData.projectWeeks || 18;
 
   // 週次タスクの日付を更新
   scheduleData.weeklyTasks = scheduleData.weeklyTasks || [];
@@ -1543,6 +1748,9 @@ function updateScheduleDates() {
 // 週次タスク上限の変更処理
 function onTaskLimitChange() {
   const taskLimit = parseInt(document.getElementById("taskLimit").value) || 0;
+  
+  // プロジェクト期間を再計算
+  updateProjectWeeks();
 
   // スケジュールを再生成
   drawTaskChart();
