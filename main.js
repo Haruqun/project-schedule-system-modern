@@ -357,45 +357,46 @@ function generateMeetingsForPattern() {
     let remainingPages = totalPages - pagesPerWeek[0];
     
     if (remainingPages > 0) {
-      // 残りのページを効果的に配分
-      if (totalWeeks >= 18) {
-        // 18週間以上の場合：前半から中盤にかけて多めに配分
-        const weeks = [2, 2, 2, 3, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0];
-        for (let i = 1; i < totalWeeks && i < weeks.length && remainingPages > 0; i++) {
-          const toAdd = Math.min(weeks[i], remainingPages);
-          pagesPerWeek[i] = toAdd;
-          remainingPages -= toAdd;
-        }
-        
-        // まだ残っている場合は中盤に追加
-        for (let i = 4; i < 12 && remainingPages > 0; i++) {
-          if (pagesPerWeek[i] < 4) {
-            const toAdd = Math.min(1, remainingPages);
-            pagesPerWeek[i] += toAdd;
+      // タスク平準化モードがオンの場合
+      const smoothModeEnabled = document.getElementById('smoothMode')?.checked ?? true;
+      
+      if (smoothModeEnabled) {
+        // 動的ページ配分アルゴリズム - タスクを平準化
+        pagesPerWeek = optimizePageDistribution(
+          totalPages, 
+          totalWeeks, 
+          firstWeekPages,
+          tasksPerPage
+        );
+      } else {
+        // 従来の配分方法
+        if (totalWeeks >= 18) {
+          // 18週間以上の場合：前半から中盤にかけて多めに配分
+          const weeks = [2, 2, 2, 3, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 0, 0, 0];
+          for (let i = 1; i < totalWeeks && i < weeks.length && remainingPages > 0; i++) {
+            const toAdd = Math.min(weeks[i], remainingPages);
+            pagesPerWeek[i] = toAdd;
             remainingPages -= toAdd;
           }
-        }
-      } else {
-        // 18週間未満の場合：均等に配分
-        const weeksToDistribute = Math.min(latestStartWeek, totalWeeks - 1);
-        const basePerWeek = Math.floor(remainingPages / weeksToDistribute);
-        const extra = remainingPages % weeksToDistribute;
-        
-        for (let i = 1; i <= weeksToDistribute && i < totalWeeks; i++) {
-          pagesPerWeek[i] = basePerWeek + (i <= extra ? 1 : 0);
-        }
-        remainingPages = 0;
-      }
-    } else if (totalWeeks >= 12) {
-      // 12週間以上の場合
-      const pagesPerFirstWeeks = Math.floor(totalPages / (latestStartWeek * 0.8));
-      for (let i = 0; i < latestStartWeek && i < totalWeeks; i++) {
-        if (i < 2) {
-          pagesPerWeek[i] = Math.max(2, Math.min(3, totalPages));
-        } else if (i < latestStartWeek * 0.6) {
-          pagesPerWeek[i] = Math.min(4, Math.max(3, pagesPerFirstWeeks));
+          
+          // まだ残っている場合は中盤に追加
+          for (let i = 4; i < 12 && remainingPages > 0; i++) {
+            if (pagesPerWeek[i] < 4) {
+              const toAdd = Math.min(1, remainingPages);
+              pagesPerWeek[i] += toAdd;
+              remainingPages -= toAdd;
+            }
+          }
         } else {
-          pagesPerWeek[i] = Math.max(1, Math.min(2, totalPages - pagesPerWeek.reduce((sum, p) => sum + p, 0)));
+          // 18週間未満の場合：均等に配分
+          const weeksToDistribute = Math.min(latestStartWeek, totalWeeks - 1);
+          const basePerWeek = Math.floor(remainingPages / weeksToDistribute);
+          const extra = remainingPages % weeksToDistribute;
+          
+          for (let i = 1; i <= weeksToDistribute && i < totalWeeks; i++) {
+            pagesPerWeek[i] = basePerWeek + (i <= extra ? 1 : 0);
+          }
+          remainingPages = 0;
         }
       }
     }
