@@ -67,6 +67,9 @@ let dragState = {
     offsetX: 0
 };
 
+// シミュレーション用の現在日付
+let simulationDate = new Date();
+
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {
     initializeScheduler();
@@ -78,6 +81,10 @@ function initializeScheduler() {
     const nextWednesday = getNextWednesday(today);
     document.getElementById('startDate').value = formatDate(nextWednesday);
     scheduleData.startDate = nextWednesday;
+    
+    // シミュレーション日付を今日に設定
+    document.getElementById('simulationDate').value = formatDate(today);
+    simulationDate = today;
     
     // スケジュールを生成
     generateSchedule();
@@ -315,8 +322,6 @@ function renderTimeline() {
     timeline.innerHTML = '';
     
     const taskLimit = parseInt(document.getElementById('taskLimit').value) || 15;
-    const today = new Date();
-    const startDate = new Date(scheduleData.startDate);
     
     for (let week = 0; week < scheduleData.totalWeeks; week++) {
         const weekDate = new Date(scheduleData.startDate);
@@ -333,8 +338,8 @@ function renderTimeline() {
             weekCell.classList.add('over-limit');
         }
         
-        // 週の進捗を計算
-        const weekProgress = calculateWeekProgress(week, weekDate, today);
+        // 週の進捗を計算（シミュレーション日付を使用）
+        const weekProgress = calculateWeekProgress(week, weekDate, simulationDate);
         
         weekCell.innerHTML = `
             <div class="week-number">第${week + 1}週</div>
@@ -468,9 +473,14 @@ function createTaskElement(task) {
 
 // 今日の線を追加
 function addTodayLine() {
-    const today = new Date();
+    // 既存の線を削除
+    const existingLine = document.querySelector('.today-line');
+    if (existingLine) {
+        existingLine.remove();
+    }
+    
     const startDate = new Date(scheduleData.startDate);
-    const daysDiff = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+    const daysDiff = Math.floor((simulationDate - startDate) / (1000 * 60 * 60 * 24));
     const weeksDiff = daysDiff / 7;
     
     if (weeksDiff >= 0 && weeksDiff <= scheduleData.totalWeeks) {
@@ -658,9 +668,8 @@ function updateStats() {
     document.getElementById('totalTasks').textContent = scheduleData.tasks.filter(t => t.owner === 'ecbeing').length;
     document.getElementById('peakTasks').textContent = Math.max(...scheduleData.weeklyTaskCounts);
     
-    // 進捗状況を計算
-    const today = new Date();
-    const progress = calculateProjectProgress(today);
+    // 進捗状況を計算（シミュレーション日付を使用）
+    const progress = calculateProjectProgress(simulationDate);
     
     document.getElementById('completedPages').textContent = progress.completed;
     document.getElementById('inProgressPages').textContent = progress.inProgress;
@@ -862,4 +871,42 @@ function exportSchedule() {
     link.href = URL.createObjectURL(blob);
     link.download = `gantt_schedule_${formatDate(new Date())}.csv`;
     link.click();
+}
+
+// シミュレーション更新
+function updateSimulation() {
+    const dateInput = document.getElementById('simulationDate').value;
+    const weekInput = parseInt(document.getElementById('simulationWeek').value) || 1;
+    
+    if (dateInput) {
+        simulationDate = new Date(dateInput);
+    } else {
+        // 週番号から日付を計算
+        simulationDate = new Date(scheduleData.startDate);
+        simulationDate.setDate(simulationDate.getDate() + (weekInput - 1) * 7);
+        document.getElementById('simulationDate').value = formatDate(simulationDate);
+    }
+    
+    // 週番号を更新
+    const weeksDiff = Math.floor((simulationDate - new Date(scheduleData.startDate)) / (1000 * 60 * 60 * 24 * 7));
+    document.getElementById('simulationWeek').value = weeksDiff + 1;
+    
+    // 再描画
+    renderTimeline();
+    addTodayLine();
+    updateStats();
+}
+
+// 今日に戻す
+function resetToToday() {
+    simulationDate = new Date();
+    document.getElementById('simulationDate').value = formatDate(simulationDate);
+    
+    const weeksDiff = Math.floor((simulationDate - new Date(scheduleData.startDate)) / (1000 * 60 * 60 * 24 * 7));
+    document.getElementById('simulationWeek').value = Math.max(1, weeksDiff + 1);
+    
+    // 再描画
+    renderTimeline();
+    addTodayLine();
+    updateStats();
 }

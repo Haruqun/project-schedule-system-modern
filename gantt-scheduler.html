@@ -460,6 +460,28 @@
             <button onclick="exportSchedule()">CSVエクスポート</button>
         </div>
         
+        <div class="controls" style="background: #f0f7ff; border: 2px solid #3498db;">
+            <div class="control-group">
+                <label for="simulationDate" style="color: #2c3e50;">
+                    🎮 シミュレーション日付:
+                </label>
+                <input type="date" id="simulationDate" />
+            </div>
+            <div class="control-group">
+                <label for="simulationWeek" style="color: #2c3e50;">
+                    または第
+                </label>
+                <input type="number" id="simulationWeek" min="1" max="52" value="1" style="width: 60px;" />
+                <span style="color: #2c3e50;">週目</span>
+            </div>
+            <button onclick="updateSimulation()" style="background: #3498db;">
+                シミュレーション実行
+            </button>
+            <button onclick="resetToToday()" style="background: #95a5a6;">
+                今日に戻す
+            </button>
+        </div>
+        
         <div class="gantt-container">
             <div class="gantt-wrapper">
                 <div class="gantt-sidebar">
