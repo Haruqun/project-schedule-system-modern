@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ガントチャート式プロジェクトスケジューラー</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header-info {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        label {
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        input[type="date"], input[type="number"], select {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="date"]:focus, input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #764ba2;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .gantt-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .gantt-wrapper {
+            display: flex;
+            overflow-x: auto;
+            position: relative;
+        }
+        
+        .gantt-sidebar {
+            min-width: 300px;
+            background: #f8f9fa;
+            border-right: 2px solid #e0e0e0;
+            position: sticky;
+            left: 0;
+            z-index: 10;
+        }
+        
+        .gantt-header {
+            display: flex;
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+        
+        .gantt-header-page {
+            padding: 15px;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .gantt-chart {
+            flex: 1;
+            position: relative;
+            min-width: max-content;
+        }
+        
+        .gantt-timeline {
+            display: flex;
+            background: #667eea;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 15;
+        }
+        
+        .timeline-week {
+            min-width: 120px;
+            padding: 10px;
+            text-align: center;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 12px;
+            position: relative;
+        }
+        
+        .timeline-week .week-number {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .timeline-week .week-date {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+        
+        .timeline-week .week-tasks {
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 4px;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .timeline-week.over-limit .week-tasks {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .gantt-rows {
+            position: relative;
+        }
+        
+        .gantt-row {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+            position: relative;
+            min-height: 60px;
+        }
+        
+        .gantt-row:hover {
+            background: #f0f7ff;
+        }
+        
+        .gantt-page-info {
+            min-width: 300px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            background: white;
+            border-right: 2px solid #e0e0e0;
+            position: sticky;
+            left: 0;
+            z-index: 5;
+        }
+        
+        .page-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .gantt-tasks {
+            position: relative;
+            flex: 1;
+            display: flex;
+        }
+        
+        .gantt-cell {
+            min-width: 120px;
+            border-right: 1px solid #f0f0f0;
+            position: relative;
+        }
+        
+        .gantt-cell:nth-child(even) {
+            background: #fafbfc;
+        }
+        
+        .gantt-task {
+            position: absolute;
+            background: #3498db;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: move;
+            transition: all 0.3s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 3;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .gantt-task:hover {
+            transform: translateY(-50%) scale(1.02);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            z-index: 4;
+        }
+        
+        .gantt-task.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        
+        .gantt-task.pc-design {
+            background: #3498db;
+        }
+        
+        .gantt-task.sp-design {
+            background: #e74c3c;
+        }
+        
+        .gantt-task.coding {
+            background: #2ecc71;
+        }
+        
+        .gantt-task.client-task {
+            background: #95a5a6;
+        }
+        
+        .task-group {
+            position: absolute;
+            border: 2px dashed #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 4px;
+            pointer-events: none;
+        }
+        
+        .stats-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .grid-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: #e0e0e0;
+            pointer-events: none;
+        }
+        
+        .today-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e74c3c;
+            z-index: 2;
+            pointer-events: none;
+        }
+        
+        .today-line::before {
+            content: '今日';
+            position: absolute;
+            top: -20px;
+            left: -15px;
+            background: #e74c3c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 ガントチャート式プロジェクトスケジューラー</h1>
+            <div class="header-info">
+                <span>✨ タスクをドラッグして日程を調整できます</span>
+                <span>🔗 関連タスクは自動的に連動して移動します</span>
+                <span>📅 全体の進捗を一目で確認できます</span>
+            </div>
+        </header>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="startDate">開始日:</label>
+                <input type="date" id="startDate" />
+            </div>
+            <div class="control-group">
+                <label for="taskLimit">週次タスク上限:</label>
+                <input type="number" id="taskLimit" min="0" max="50" value="15" />
+            </div>
+            <div class="control-group">
+                <label for="firstWeekPages">第1週開始ページ数:</label>
+                <input type="number" id="firstWeekPages" min="1" max="10" value="7" />
+            </div>
+            <button onclick="resetSchedule()">スケジュールをリセット</button>
+            <button onclick="exportSchedule()">CSVエクスポート</button>
+        </div>
+        
+        <div class="gantt-container">
+            <div class="gantt-wrapper">
+                <div class="gantt-sidebar">
+                    <div class="gantt-header">
+                        <div class="gantt-header-page">ページ名</div>
+                    </div>
+                    <div id="ganttPages"></div>
+                </div>
+                <div class="gantt-chart">
+                    <div class="gantt-timeline" id="ganttTimeline"></div>
+                    <div class="gantt-rows" id="ganttRows"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-panel">
+            <h3>📈 プロジェクト統計</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalPages">35</div>
+                    <div class="stat-label">総ページ数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="projectWeeks">18</div>
+                    <div class="stat-label">プロジェクト期間（週）</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalTasks">315</div>
+                    <div class="stat-label">総タスク数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="peakTasks">19</div>
+                    <div class="stat-label">最大週次タスク数</div>
+                </div>
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3498db;"></div>
+                    <span>PCデザイン</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e74c3c;"></div>
+                    <span>SPデザイン</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #2ecc71;"></div>
+                    <span>コーディング</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #95a5a6;"></div>
+                    <span>クライアント確認</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip"></div>
+    
+    <script src="gantt-scheduler.js"></script>
+</body>
+</html>
