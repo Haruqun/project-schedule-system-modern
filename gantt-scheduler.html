@@ -151,7 +151,7 @@
             color: white;
             position: sticky;
             top: 0;
-            z-index: 15;
+            z-index: 25;
             min-width: max-content;
         }
         
@@ -438,7 +438,7 @@
         
         .chart-panel {
             background: white;
-            padding: 20px;
+            padding: 15px;
             border-radius: 8px 8px 0 0;
             margin-top: 20px;
             box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
@@ -450,8 +450,8 @@
         
         .chart-container {
             position: relative;
-            height: 300px;
-            margin-top: 20px;
+            height: 200px;
+            margin-top: 15px;
         }
         
         #taskChart {
@@ -486,6 +486,8 @@
             </div>
             <button onclick="resetSchedule()">スケジュールをリセット</button>
             <button onclick="exportSchedule()">CSVエクスポート</button>
+            <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleFileSelect(event)">
+            <button onclick="document.getElementById('csvFileInput').click()">CSVインポート</button>
         </div>
         
         <div class="gantt-container">

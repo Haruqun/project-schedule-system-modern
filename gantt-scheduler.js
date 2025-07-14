@@ -1001,3 +1001,130 @@ document.addEventListener('click', (e) => {
         selectedTask = null;
     }
 });
+
+// CSVファイル選択処理
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            importCSV(e.target.result);
+        } catch (error) {
+            alert('CSVファイルの読み込みに失敗しました: ' + error.message);
+        }
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
+// CSVインポート処理
+function importCSV(csvContent) {
+    const lines = csvContent.split('\n').filter(line => line.trim());
+    if (lines.length < 2) {
+        throw new Error('有効なデータが含まれていません');
+    }
+    
+    // ヘッダー行をスキップ
+    const header = lines[0];
+    if (!header.includes('ページ名') || !header.includes('週')) {
+        throw new Error('CSVファイルの形式が正しくありません');
+    }
+    
+    // 新しいタスクデータを構築
+    const newTasks = [];
+    const pageWeeks = {};
+    
+    for (let i = 1; i < lines.length; i++) {
+        const columns = parseCSVLine(lines[i]);
+        if (columns.length < 6) continue;
+        
+        const pageName = columns[0];
+        const phase = columns[1];
+        const taskText = columns[2];
+        const weekStr = columns[3];
+        const weekMatch = weekStr.match(/第(\d+)週/);
+        
+        if (!weekMatch) continue;
+        
+        const week = parseInt(weekMatch[1]) - 1;
+        const owner = columns[5];
+        
+        // ページインデックスを取得
+        const pageIndex = projectData.pages.findIndex(p => p.includes(pageName));
+        if (pageIndex === -1) continue;
+        
+        // タスクタイプを判定
+        let type = 'pc-design';
+        if (phase.includes('SP')) type = 'sp-design';
+        else if (phase.includes('コーディング')) type = 'coding';
+        
+        const isReview = taskText.includes('修正依頼') || taskText.includes('確認');
+        
+        // タスクを作成
+        const task = {
+            id: `page${pageIndex}_${type}_week${week}${isReview ? '_review' : ''}`,
+            pageIndex: pageIndex,
+            pageName: projectData.pages[pageIndex],
+            phase: phase,
+            text: taskText,
+            week: week,
+            type: owner === 'client' ? 'client-task' : type,
+            owner: owner,
+            isReview: isReview
+        };
+        
+        newTasks.push(task);
+        
+        // ページの週を記録
+        if (!pageWeeks[pageIndex]) {
+            pageWeeks[pageIndex] = [];
+        }
+        pageWeeks[pageIndex].push(week);
+    }
+    
+    if (newTasks.length === 0) {
+        throw new Error('インポート可能なタスクが見つかりませんでした');
+    }
+    
+    // 最大週を計算
+    let maxWeek = 0;
+    Object.values(pageWeeks).forEach(weeks => {
+        const pageMaxWeek = Math.max(...weeks);
+        if (pageMaxWeek > maxWeek) maxWeek = pageMaxWeek;
+    });
+    
+    // スケジュールデータを更新
+    scheduleData.tasks = newTasks;
+    scheduleData.totalWeeks = maxWeek + 3; // 余裕を持たせる
+    updatePageSchedules();
+    countWeeklyTasks();
+    
+    // ガントチャートを再描画
+    renderGanttChart();
+    
+    alert(`${newTasks.length}個のタスクをインポートしました`);
+}
+
+// CSV行をパースする関数
+function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    
+    result.push(current.trim());
+    return result;
+}
