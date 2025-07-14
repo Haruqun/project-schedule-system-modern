@@ -1097,8 +1097,30 @@ function importCSV(csvContent) {
     // スケジュールデータを更新
     scheduleData.tasks = newTasks;
     scheduleData.totalWeeks = maxWeek + 3; // 余裕を持たせる
-    updatePageSchedules();
-    countWeeklyTasks();
+    
+    // ページスケジュールを再構築
+    scheduleData.pageSchedules = {};
+    newTasks.forEach(task => {
+        if (!scheduleData.pageSchedules[task.pageName]) {
+            scheduleData.pageSchedules[task.pageName] = {
+                startWeek: task.week,
+                tasks: []
+            };
+        }
+        scheduleData.pageSchedules[task.pageName].tasks.push(task);
+        // 開始週を更新
+        if (task.week < scheduleData.pageSchedules[task.pageName].startWeek) {
+            scheduleData.pageSchedules[task.pageName].startWeek = task.week;
+        }
+    });
+    
+    // 週次タスク数を再計算
+    scheduleData.weeklyTaskCounts = new Array(scheduleData.totalWeeks).fill(0);
+    newTasks.forEach(task => {
+        if (task.owner === 'ecbeing' && task.week < scheduleData.totalWeeks) {
+            scheduleData.weeklyTaskCounts[task.week]++;
+        }
+    });
     
     // ガントチャートを再描画
     renderGanttChart();
