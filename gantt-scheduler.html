@@ -165,6 +165,17 @@
             height: 120px;
         }
         
+        .timeline-review {
+            min-width: 60px;
+            padding: 10px 5px;
+            text-align: center;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 11px;
+            position: relative;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
         .timeline-week .week-number {
             font-weight: 600;
             font-size: 14px;
@@ -259,6 +270,13 @@
         
         .gantt-cell:nth-child(even) {
             background: #fafbfc;
+        }
+        
+        .gantt-cell-review {
+            min-width: 60px;
+            border-right: 1px solid #f0f0f0;
+            position: relative;
+            background: #f5f5f5;
         }
         
         .gantt-task {
@@ -460,28 +478,6 @@
             <button onclick="exportSchedule()">CSVエクスポート</button>
         </div>
         
-        <div class="controls" style="background: #f0f7ff; border: 2px solid #3498db;">
-            <div class="control-group">
-                <label for="simulationDate" style="color: #2c3e50;">
-                    🎮 シミュレーション日付:
-                </label>
-                <input type="date" id="simulationDate" />
-            </div>
-            <div class="control-group">
-                <label for="simulationWeek" style="color: #2c3e50;">
-                    または第
-                </label>
-                <input type="number" id="simulationWeek" min="1" max="52" value="1" style="width: 60px;" />
-                <span style="color: #2c3e50;">週目</span>
-            </div>
-            <button onclick="updateSimulation()" style="background: #3498db;">
-                シミュレーション実行
-            </button>
-            <button onclick="resetToToday()" style="background: #95a5a6;">
-                今日に戻す
-            </button>
-        </div>
-        
         <div class="gantt-container">
             <div class="gantt-wrapper">
                 <div class="gantt-sidebar">
@@ -518,23 +514,23 @@
                 </div>
             </div>
             
-            <h4 style="margin-top: 30px; margin-bottom: 15px;">📊 進捗状況</h4>
+            <h4 style="margin-top: 30px; margin-bottom: 15px;">📊 スケジュール通りの進捗状況（理論値）</h4>
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value" id="completedPages">0</div>
-                    <div class="stat-label">完了ページ数</div>
+                    <div class="stat-label">完了予定ページ数</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="inProgressPages">0</div>
-                    <div class="stat-label">進行中ページ数</div>
+                    <div class="stat-label">進行中予定ページ数</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="notStartedPages">35</div>
-                    <div class="stat-label">未着手ページ数</div>
+                    <div class="stat-label">未着手予定ページ数</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="completionRate">0%</div>
-                    <div class="stat-label">全体完了率</div>
+                    <div class="stat-label">理論完了率</div>
                 </div>
             </div>
             

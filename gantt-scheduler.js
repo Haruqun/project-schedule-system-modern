@@ -67,8 +67,6 @@ let dragState = {
     offsetX: 0
 };
 
-// シミュレーション用の現在日付
-let simulationDate = new Date();
 
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {
@@ -82,9 +80,6 @@ function initializeScheduler() {
     document.getElementById('startDate').value = formatDate(nextWednesday);
     scheduleData.startDate = nextWednesday;
     
-    // シミュレーション日付を今日に設定
-    document.getElementById('simulationDate').value = formatDate(today);
-    simulationDate = today;
     
     // スケジュールを生成
     generateSchedule();
@@ -155,7 +150,17 @@ function calculateRequiredWeeks(totalPages, firstWeekPages, taskLimit) {
         const totalDistributed = distribution.reduce((sum, pages) => sum + pages, 0);
         
         if (totalDistributed >= totalPages) {
-            return testWeeks;
+            // 最後のページが完了するまでの週数を確保
+            let lastPageStartWeek = 0;
+            for (let i = distribution.length - 1; i >= 0; i--) {
+                if (distribution[i] > 0) {
+                    lastPageStartWeek = i;
+                    break;
+                }
+            }
+            // 最後のページ開始週 + 完了に必要な週数
+            const actualRequiredWeeks = lastPageStartWeek + weeksPerPage;
+            return Math.max(testWeeks, actualRequiredWeeks);
         }
         testWeeks++;
     }
@@ -260,7 +265,7 @@ function generateTasks(pageDistribution) {
                 scheduleData.tasks.push(submitTask);
                 scheduleData.pageSchedules[pageName].tasks.push(submitTask);
                 
-                // 修正依頼タスク（同週内、3営業日後）
+                // 修正依頼タスク（週の間の列に配置）
                 const reviewTask = {
                     id: taskId++,
                     pageIndex: pageIndex,
@@ -272,7 +277,8 @@ function generateTasks(pageDistribution) {
                     duration: 1,
                     text: `${phase.name}修正依頼`,
                     owner: 'client',
-                    parentId: submitTask.id
+                    parentId: submitTask.id,
+                    isReview: true  // 修正依頼フラグ
                 };
                 scheduleData.tasks.push(reviewTask);
                 scheduleData.pageSchedules[pageName].tasks.push(reviewTask);
@@ -327,6 +333,7 @@ function renderTimeline() {
         const weekDate = new Date(scheduleData.startDate);
         weekDate.setDate(weekDate.getDate() + week * 7);
         
+        // 週のセル
         const weekCell = document.createElement('div');
         weekCell.className = 'timeline-week';
         
@@ -338,8 +345,8 @@ function renderTimeline() {
             weekCell.classList.add('over-limit');
         }
         
-        // 週の進捗を計算（シミュレーション日付を使用）
-        const weekProgress = calculateWeekProgress(week, weekDate, simulationDate);
+        // 週の進捗を計算
+        const weekProgress = calculateWeekProgress(week, weekDate);
         
         weekCell.innerHTML = `
             <div class="week-number">第${week + 1}週</div>
@@ -351,39 +358,47 @@ function renderTimeline() {
             <div class="week-progress-text">${weekProgress.text}</div>
         `;
         timeline.appendChild(weekCell);
+        
+        // 最終週以外は修正依頼の列を追加
+        if (week < scheduleData.totalWeeks - 1) {
+            const reviewDate = new Date(weekDate);
+            reviewDate.setDate(reviewDate.getDate() + 3); // 3営業日後（木曜日）
+            
+            const reviewCell = document.createElement('div');
+            reviewCell.className = 'timeline-review';
+            reviewCell.innerHTML = `
+                <div style="font-weight: 600;">修正依頼</div>
+                <div style="font-size: 10px;">${formatDateJP(reviewDate)}</div>
+                <div style="font-size: 10px; margin-top: 5px;">木曜</div>
+            `;
+            timeline.appendChild(reviewCell);
+        }
     }
 }
 
-// 週の進捗を計算
-function calculateWeekProgress(weekIndex, weekStartDate, today) {
-    const weekEndDate = new Date(weekStartDate);
-    weekEndDate.setDate(weekEndDate.getDate() + 6);
+// 週の進捗を計算（スケジュール通りに進んだ場合の理論値）
+function calculateWeekProgress(weekIndex, weekStartDate) {
+    // この週までに完了しているべきタスクを計算
+    const totalTasksUpToWeek = scheduleData.tasks.filter(task => 
+        task.owner === 'ecbeing' && task.week <= weekIndex
+    ).length;
     
-    // 未来の週
-    if (today < weekStartDate) {
-        return { percentage: 0, text: '未着手' };
+    const totalTasks = scheduleData.tasks.filter(t => t.owner === 'ecbeing').length;
+    
+    if (totalTasks === 0) {
+        return { percentage: 0, text: 'タスクなし' };
     }
     
-    // 過去の週
-    if (today > weekEndDate) {
-        // この週のタスクを確認
-        const weekTasks = scheduleData.tasks.filter(task => 
-            task.week === weekIndex && task.owner === 'ecbeing'
-        );
-        
-        if (weekTasks.length === 0) {
-            return { percentage: 0, text: 'タスクなし' };
-        }
-        
-        // 完了したと仮定（実際の実装では完了フラグが必要）
-        return { percentage: 100, text: '完了' };
-    }
+    // 累積完了率
+    const cumulativePercentage = Math.round((totalTasksUpToWeek / totalTasks) * 100);
     
-    // 現在の週
-    const daysPassed = Math.floor((today - weekStartDate) / (1000 * 60 * 60 * 24));
-    const percentage = Math.round((daysPassed / 7) * 100);
+    // この週のタスク数
+    const weekTasks = scheduleData.weeklyTaskCounts[weekIndex] || 0;
     
-    return { percentage: percentage, text: `進行中 (${daysPassed}/7日)` };
+    return { 
+        percentage: cumulativePercentage, 
+        text: `累積 ${cumulativePercentage}% (${weekTasks}タスク)`
+    };
 }
 
 // ページ一覧描画
@@ -410,10 +425,21 @@ function renderPages() {
         tasksContainer.className = 'gantt-tasks';
         
         for (let week = 0; week < scheduleData.totalWeeks; week++) {
+            // 週のセル
             const cell = document.createElement('div');
             cell.className = 'gantt-cell';
             cell.dataset.week = week;
+            cell.dataset.cellType = 'week';
             tasksContainer.appendChild(cell);
+            
+            // 最終週以外は修正依頼のセルを追加
+            if (week < scheduleData.totalWeeks - 1) {
+                const reviewCell = document.createElement('div');
+                reviewCell.className = 'gantt-cell-review';
+                reviewCell.dataset.week = week;
+                reviewCell.dataset.cellType = 'review';
+                tasksContainer.appendChild(reviewCell);
+            }
         }
         
         row.appendChild(tasksContainer);
@@ -424,6 +450,8 @@ function renderPages() {
 // タスク描画
 function renderTasks() {
     const rowsContainer = document.getElementById('ganttRows');
+    const cellWidth = 120;
+    const reviewCellWidth = 60;
     
     scheduleData.tasks.forEach(task => {
         const row = rowsContainer.children[task.pageIndex];
@@ -433,21 +461,27 @@ function renderTasks() {
         const taskElement = createTaskElement(task);
         
         // 位置を計算
-        const cellWidth = 120;
-        const left = task.week * cellWidth + 5;
-        const width = task.duration * cellWidth - 10;
+        let left;
+        let width;
+        
+        if (task.isReview) {
+            // 修正依頼タスクは週の間の列に配置
+            // 週の位置 + 週の幅 + 前の修正依頼列の幅の合計
+            left = (task.week * cellWidth) + cellWidth + (task.week * reviewCellWidth) + 5;
+            width = reviewCellWidth - 10;
+        } else {
+            // 通常のタスクは週の列に配置
+            // 週の位置 + 前の修正依頼列の幅の合計
+            left = (task.week * cellWidth) + (task.week * reviewCellWidth) + 5;
+            width = cellWidth - 10;
+        }
         
         taskElement.style.left = `${left}px`;
         taskElement.style.width = `${width}px`;
         
-        // 垂直位置を調整（タスクタイプによって）
-        if (task.type === 'submit') {
-            taskElement.style.top = '10px';
-        } else if (task.type === 'review') {
-            taskElement.style.top = '30px';
-        } else {
-            taskElement.style.top = '10px';
-        }
+        // 垂直位置を調整
+        taskElement.style.top = '50%';
+        taskElement.style.transform = 'translateY(-50%)';
         
         tasksContainer.appendChild(taskElement);
     });
@@ -479,14 +513,26 @@ function addTodayLine() {
         existingLine.remove();
     }
     
+    const today = new Date();
     const startDate = new Date(scheduleData.startDate);
-    const daysDiff = Math.floor((simulationDate - startDate) / (1000 * 60 * 60 * 24));
+    const daysDiff = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
     const weeksDiff = daysDiff / 7;
     
     if (weeksDiff >= 0 && weeksDiff <= scheduleData.totalWeeks) {
         const line = document.createElement('div');
         line.className = 'today-line';
-        line.style.left = `${300 + weeksDiff * 120}px`; // サイドバー幅 + 週数 * セル幅
+        
+        // 週の幅（120px）と修正依頼列の幅（60px）を考慮した位置計算
+        const cellWidth = 120;
+        const reviewCellWidth = 60;
+        const weekNumber = Math.floor(weeksDiff);
+        const dayInWeek = daysDiff % 7;
+        const dayOffset = (dayInWeek / 7) * cellWidth;
+        
+        // サイドバー幅 + (週数 * 週幅) + (週数 * 修正依頼列幅) + 日のオフセット
+        const left = 300 + (weekNumber * cellWidth) + (weekNumber * reviewCellWidth) + dayOffset;
+        
+        line.style.left = `${left}px`;
         document.querySelector('.gantt-container').appendChild(line);
     }
 }
@@ -668,8 +714,9 @@ function updateStats() {
     document.getElementById('totalTasks').textContent = scheduleData.tasks.filter(t => t.owner === 'ecbeing').length;
     document.getElementById('peakTasks').textContent = Math.max(...scheduleData.weeklyTaskCounts);
     
-    // 進捗状況を計算（シミュレーション日付を使用）
-    const progress = calculateProjectProgress(simulationDate);
+    // 進捗状況を計算
+    const today = new Date();
+    const progress = calculateProjectProgress(today);
     
     document.getElementById('completedPages').textContent = progress.completed;
     document.getElementById('inProgressPages').textContent = progress.inProgress;
@@ -677,54 +724,53 @@ function updateStats() {
     document.getElementById('completionRate').textContent = progress.completionRate + '%';
 }
 
-// プロジェクト全体の進捗を計算
+// プロジェクト全体の進捗を計算（スケジュール通りの理論値）
 function calculateProjectProgress(today) {
-    let completed = 0;
-    let inProgress = 0;
-    let notStarted = 0;
+    // 今日が第何週目かを計算
+    const weeksDiff = Math.floor((today - new Date(scheduleData.startDate)) / (1000 * 60 * 60 * 24 * 7));
+    const currentWeek = Math.max(0, weeksDiff);
+    
+    let theoreticalCompleted = 0;
+    let theoreticalInProgress = 0;
+    let theoreticalNotStarted = 0;
     
     projectData.pages.forEach((pageName, index) => {
-        const pageTasks = scheduleData.tasks.filter(t => t.pageIndex === index);
+        const pageTasks = scheduleData.tasks.filter(t => t.pageIndex === index && t.owner === 'ecbeing');
         if (pageTasks.length === 0) {
-            notStarted++;
+            theoreticalNotStarted++;
             return;
         }
         
-        // 最初のタスクの週を確認
+        // ページの開始週と終了週を取得
         const firstTask = pageTasks.find(t => t.type === 'submit' && t.phase === 'PCデザイン');
-        if (!firstTask) {
-            notStarted++;
-            return;
-        }
-        
-        const firstTaskDate = new Date(scheduleData.startDate);
-        firstTaskDate.setDate(firstTaskDate.getDate() + firstTask.week * 7);
-        
-        if (today < firstTaskDate) {
-            notStarted++;
-            return;
-        }
-        
-        // 最後のタスクの週を確認
         const lastTask = pageTasks.find(t => t.type === 'revision' && t.phase === 'コーディング');
-        if (!lastTask) {
-            inProgress++;
+        
+        if (!firstTask || !lastTask) {
+            theoreticalNotStarted++;
             return;
         }
         
-        const lastTaskDate = new Date(scheduleData.startDate);
-        lastTaskDate.setDate(lastTaskDate.getDate() + lastTask.week * 7 + 7); // 週の終わり
-        
-        if (today > lastTaskDate) {
-            completed++;
+        if (currentWeek < firstTask.week) {
+            // まだ開始していない
+            theoreticalNotStarted++;
+        } else if (currentWeek > lastTask.week) {
+            // 完了している
+            theoreticalCompleted++;
         } else {
-            inProgress++;
+            // 進行中
+            theoreticalInProgress++;
         }
     });
     
-    const completionRate = Math.round((completed / projectData.pages.length) * 100);
+    // 理論的な完了率（スケジュール通りに進んだ場合）
+    const completionRate = Math.round((theoreticalCompleted / projectData.pages.length) * 100);
     
-    return { completed, inProgress, notStarted, completionRate };
+    return { 
+        completed: theoreticalCompleted, 
+        inProgress: theoreticalInProgress, 
+        notStarted: theoreticalNotStarted, 
+        completionRate: completionRate 
+    };
 }
 
 // タスク量グラフ描画
@@ -873,40 +919,3 @@ function exportSchedule() {
     link.click();
 }
 
-// シミュレーション更新
-function updateSimulation() {
-    const dateInput = document.getElementById('simulationDate').value;
-    const weekInput = parseInt(document.getElementById('simulationWeek').value) || 1;
-    
-    if (dateInput) {
-        simulationDate = new Date(dateInput);
-    } else {
-        // 週番号から日付を計算
-        simulationDate = new Date(scheduleData.startDate);
-        simulationDate.setDate(simulationDate.getDate() + (weekInput - 1) * 7);
-        document.getElementById('simulationDate').value = formatDate(simulationDate);
-    }
-    
-    // 週番号を更新
-    const weeksDiff = Math.floor((simulationDate - new Date(scheduleData.startDate)) / (1000 * 60 * 60 * 24 * 7));
-    document.getElementById('simulationWeek').value = weeksDiff + 1;
-    
-    // 再描画
-    renderTimeline();
-    addTodayLine();
-    updateStats();
-}
-
-// 今日に戻す
-function resetToToday() {
-    simulationDate = new Date();
-    document.getElementById('simulationDate').value = formatDate(simulationDate);
-    
-    const weeksDiff = Math.floor((simulationDate - new Date(scheduleData.startDate)) / (1000 * 60 * 60 * 24 * 7));
-    document.getElementById('simulationWeek').value = Math.max(1, weeksDiff + 1);
-    
-    // 再描画
-    renderTimeline();
-    addTodayLine();
-    updateStats();
-}
