@@ -315,6 +315,8 @@ function renderTimeline() {
     timeline.innerHTML = '';
     
     const taskLimit = parseInt(document.getElementById('taskLimit').value) || 15;
+    const today = new Date();
+    const startDate = new Date(scheduleData.startDate);
     
     for (let week = 0; week < scheduleData.totalWeeks; week++) {
         const weekDate = new Date(scheduleData.startDate);
@@ -331,13 +333,52 @@ function renderTimeline() {
             weekCell.classList.add('over-limit');
         }
         
+        // 週の進捗を計算
+        const weekProgress = calculateWeekProgress(week, weekDate, today);
+        
         weekCell.innerHTML = `
             <div class="week-number">第${week + 1}週</div>
             <div class="week-date">${formatDateJP(weekDate)}</div>
             <div class="week-tasks">${weekTasks}タスク</div>
+            <div class="week-progress">
+                <div class="week-progress-bar" style="width: ${weekProgress.percentage}%"></div>
+            </div>
+            <div class="week-progress-text">${weekProgress.text}</div>
         `;
         timeline.appendChild(weekCell);
     }
+}
+
+// 週の進捗を計算
+function calculateWeekProgress(weekIndex, weekStartDate, today) {
+    const weekEndDate = new Date(weekStartDate);
+    weekEndDate.setDate(weekEndDate.getDate() + 6);
+    
+    // 未来の週
+    if (today < weekStartDate) {
+        return { percentage: 0, text: '未着手' };
+    }
+    
+    // 過去の週
+    if (today > weekEndDate) {
+        // この週のタスクを確認
+        const weekTasks = scheduleData.tasks.filter(task => 
+            task.week === weekIndex && task.owner === 'ecbeing'
+        );
+        
+        if (weekTasks.length === 0) {
+            return { percentage: 0, text: 'タスクなし' };
+        }
+        
+        // 完了したと仮定（実際の実装では完了フラグが必要）
+        return { percentage: 100, text: '完了' };
+    }
+    
+    // 現在の週
+    const daysPassed = Math.floor((today - weekStartDate) / (1000 * 60 * 60 * 24));
+    const percentage = Math.round((daysPassed / 7) * 100);
+    
+    return { percentage: percentage, text: `進行中 (${daysPassed}/7日)` };
 }
 
 // ページ一覧描画
@@ -616,6 +657,65 @@ function updateStats() {
     document.getElementById('projectWeeks').textContent = scheduleData.totalWeeks;
     document.getElementById('totalTasks').textContent = scheduleData.tasks.filter(t => t.owner === 'ecbeing').length;
     document.getElementById('peakTasks').textContent = Math.max(...scheduleData.weeklyTaskCounts);
+    
+    // 進捗状況を計算
+    const today = new Date();
+    const progress = calculateProjectProgress(today);
+    
+    document.getElementById('completedPages').textContent = progress.completed;
+    document.getElementById('inProgressPages').textContent = progress.inProgress;
+    document.getElementById('notStartedPages').textContent = progress.notStarted;
+    document.getElementById('completionRate').textContent = progress.completionRate + '%';
+}
+
+// プロジェクト全体の進捗を計算
+function calculateProjectProgress(today) {
+    let completed = 0;
+    let inProgress = 0;
+    let notStarted = 0;
+    
+    projectData.pages.forEach((pageName, index) => {
+        const pageTasks = scheduleData.tasks.filter(t => t.pageIndex === index);
+        if (pageTasks.length === 0) {
+            notStarted++;
+            return;
+        }
+        
+        // 最初のタスクの週を確認
+        const firstTask = pageTasks.find(t => t.type === 'submit' && t.phase === 'PCデザイン');
+        if (!firstTask) {
+            notStarted++;
+            return;
+        }
+        
+        const firstTaskDate = new Date(scheduleData.startDate);
+        firstTaskDate.setDate(firstTaskDate.getDate() + firstTask.week * 7);
+        
+        if (today < firstTaskDate) {
+            notStarted++;
+            return;
+        }
+        
+        // 最後のタスクの週を確認
+        const lastTask = pageTasks.find(t => t.type === 'revision' && t.phase === 'コーディング');
+        if (!lastTask) {
+            inProgress++;
+            return;
+        }
+        
+        const lastTaskDate = new Date(scheduleData.startDate);
+        lastTaskDate.setDate(lastTaskDate.getDate() + lastTask.week * 7 + 7); // 週の終わり
+        
+        if (today > lastTaskDate) {
+            completed++;
+        } else {
+            inProgress++;
+        }
+    });
+    
+    const completionRate = Math.round((completed / projectData.pages.length) * 100);
+    
+    return { completed, inProgress, notStarted, completionRate };
 }
 
 // タスク量グラフ描画

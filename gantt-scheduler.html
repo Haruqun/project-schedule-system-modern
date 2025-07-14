@@ -162,6 +162,7 @@
             border-right: 1px solid rgba(255, 255, 255, 0.2);
             font-size: 12px;
             position: relative;
+            height: 120px;
         }
         
         .timeline-week .week-number {
@@ -187,6 +188,27 @@
         .timeline-week.over-limit .week-tasks {
             background: #e74c3c;
             color: white;
+        }
+        
+        .week-progress {
+            margin-top: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            height: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .week-progress-bar {
+            height: 100%;
+            background: #2ecc71;
+            transition: width 0.3s ease;
+        }
+        
+        .week-progress-text {
+            font-size: 10px;
+            margin-top: 2px;
+            opacity: 0.9;
         }
         
         .gantt-rows {
@@ -471,6 +493,26 @@
                 <div class="stat-card">
                     <div class="stat-value" id="peakTasks">19</div>
                     <div class="stat-label">最大週次タスク数</div>
+                </div>
+            </div>
+            
+            <h4 style="margin-top: 30px; margin-bottom: 15px;">📊 進捗状況</h4>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="completedPages">0</div>
+                    <div class="stat-label">完了ページ数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="inProgressPages">0</div>
+                    <div class="stat-label">進行中ページ数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="notStartedPages">35</div>
+                    <div class="stat-label">未着手ページ数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="completionRate">0%</div>
+                    <div class="stat-label">全体完了率</div>
                 </div>
             </div>
             
