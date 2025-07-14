@@ -456,9 +456,18 @@ function renderTasks() {
     const cellWidth = 120;
     const reviewCellWidth = 60;
     
-    scheduleData.tasks.forEach(task => {
+    // タスクをページインデックスでソート
+    const sortedTasks = [...scheduleData.tasks].sort((a, b) => {
+        if (a.pageIndex !== b.pageIndex) return a.pageIndex - b.pageIndex;
+        return a.week - b.week;
+    });
+    
+    sortedTasks.forEach(task => {
         const row = rowsContainer.children[task.pageIndex];
-        if (!row) return;
+        if (!row) {
+            console.warn(`No row found for pageIndex ${task.pageIndex}, page: ${task.pageName}`);
+            return;
+        }
         
         const tasksContainer = row.querySelector('.gantt-tasks');
         const taskElement = createTaskElement(task);
@@ -1137,12 +1146,18 @@ function importCSV(csvContent) {
         // ページインデックスを取得
         let pageIndex = -1;
         for (let i = 0; i < projectData.pages.length; i++) {
-            if (projectData.pages[i].includes(`(${pageName})`)) {
+            // 括弧の中身で検索、または完全一致で検索
+            if (projectData.pages[i].includes(`(${pageName})`) || 
+                projectData.pages[i] === pageName ||
+                projectData.pages[i].split('(')[0] === pageName) {
                 pageIndex = i;
                 break;
             }
         }
-        if (pageIndex === -1) continue;
+        if (pageIndex === -1) {
+            console.warn(`Page not found: ${pageName}`);
+            continue;
+        }
         
         // タスクタイプを判定
         let type = 'pc-design';
