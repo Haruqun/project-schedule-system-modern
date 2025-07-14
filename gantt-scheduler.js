@@ -871,12 +871,12 @@ function drawTaskChart() {
     
     // キャンバスサイズ設定
     canvas.width = canvas.offsetWidth;
-    canvas.height = 100;
+    canvas.height = 200;
     
     const data = scheduleData.weeklyTaskCounts;
     const taskLimit = parseInt(document.getElementById('taskLimit').value) || 15;
     const maxTasks = Math.max(...data, taskLimit);
-    const padding = 25;
+    const padding = 40;
     const chartWidth = canvas.width - 2 * padding;
     const chartHeight = canvas.height - 2 * padding;
     const barWidth = (chartWidth / data.length) * 0.7;
@@ -889,7 +889,7 @@ function drawTaskChart() {
     // グリッド線とY軸ラベル
     ctx.strokeStyle = '#e0e0e0';
     ctx.lineWidth = 1;
-    ctx.font = '10px Arial';
+    ctx.font = '12px Arial';
     ctx.fillStyle = '#666';
     
     for (let i = 0; i <= 5; i++) {
@@ -921,7 +921,7 @@ function drawTaskChart() {
         
         // ラベル
         ctx.fillStyle = '#e74c3c';
-        ctx.font = 'bold 10px Arial';
+        ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'left';
         ctx.fillText(`上限: ${taskLimit}`, canvas.width - padding + 10, limitY + 4);
     }
@@ -939,7 +939,7 @@ function drawTaskChart() {
         
         // タスク数表示
         ctx.fillStyle = '#333';
-        ctx.font = 'bold 10px Arial';
+        ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
         if (tasks > 0) {
             ctx.fillText(tasks, x + barWidth / 2, y - 5);
@@ -947,7 +947,7 @@ function drawTaskChart() {
         
         // X軸ラベル（週番号）
         ctx.fillStyle = '#666';
-        ctx.font = '9px Arial';
+        ctx.font = '11px Arial';
         ctx.fillText(`${week + 1}`, x + barWidth / 2, padding + chartHeight + 15);
     });
     
