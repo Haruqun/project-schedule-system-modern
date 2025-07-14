@@ -16,11 +16,17 @@
             background-color: #f5f7fa;
             color: #333;
             line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
         }
         
         .container {
             width: 100%;
-            padding: 20px;
+            height: 100vh;
+            padding: 0;
+            position: relative;
         }
         
         
@@ -81,13 +87,17 @@
         
         .gantt-container {
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            position: relative;
-            max-height: calc(100vh - 200px);
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             overflow-y: auto;
-            /* スティッキーヘッダー対応 */
             overflow-x: hidden;
+            /* フル画面表示 */
+            margin: 0;
+            border-radius: 0;
+            box-shadow: none;
         }
         
         .gantt-wrapper {
@@ -501,34 +511,12 @@
         }
         
         .help-button {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 50px;
-            height: 50px;
-            background: #667eea;
+            background: #28a745;
             color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-            z-index: 1000;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         
         .help-button:hover {
-            background: #764ba2;
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-        
-        .help-button:active {
-            transform: scale(0.95);
+            background: #218838;
         }
         
         .help-tooltip {
@@ -802,11 +790,128 @@
             width: 100%;
             height: 100%;
         }
+        
+        /* ドロワーメニュー */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .drawer-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: white;
+            z-index: 999;
+            overflow-y: auto;
+            transition: right 0.3s ease;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .drawer.active {
+            right: 0;
+        }
+        
+        .drawer-content {
+            padding: 20px;
+        }
+        
+        .drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .drawer-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin: 0;
+        }
+        
+        .drawer-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+            padding: 5px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .drawer-close:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        /* フローティングボタン */
+        .floating-buttons {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+        
+        .floating-button {
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 50%;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .floating-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .floating-button:active {
+            transform: scale(0.95);
+        }
+        
+        .menu-button {
+            background: #667eea;
+            color: white;
+        }
+        
+        .menu-button:hover {
+            background: #764ba2;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- ガントチャートを最上部に配置 -->
+        <!-- ガントチャートをフル画面表示 -->
         <div class="gantt-container">
             <div class="gantt-wrapper">
                 <div class="gantt-timeline" id="ganttTimeline"></div>
@@ -819,43 +924,55 @@
             </div>
         </div>
         
-        
-        <div class="controls">
-            <div class="control-group">
-                <label for="startDate">開始日:</label>
-                <input type="date" id="startDate" />
+    </div>
+    
+    <!-- ドロワーオーバーレイ -->
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+    
+    <!-- ドロワーメニュー -->
+    <div class="drawer" id="drawer">
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <h2 class="drawer-title">📊 プロジェクト設定</h2>
+                <button class="drawer-close" onclick="closeDrawer()">&times;</button>
             </div>
-            <div class="control-group">
-                <label for="taskLimit">週次タスク上限:</label>
-                <input type="number" id="taskLimit" min="0" max="50" value="15" />
+            
+            <!-- コントロール部分 -->
+            <div class="controls" style="margin-bottom: 30px;">
+                <div class="control-group">
+                    <label for="startDate">開始日:</label>
+                    <input type="date" id="startDate" />
+                </div>
+                <div class="control-group">
+                    <label for="taskLimit">週次タスク上限:</label>
+                    <input type="number" id="taskLimit" min="0" max="50" value="15" />
+                </div>
+                <div class="control-group">
+                    <label for="firstWeekPages">第1週開始ページ数:</label>
+                    <input type="number" id="firstWeekPages" min="1" max="10" value="7" />
+                </div>
+                <button onclick="resetSchedule()">スケジュールをリセット</button>
+                <button onclick="exportSchedule()">CSVエクスポート</button>
+                <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleFileSelect(event)">
+                <button onclick="document.getElementById('csvFileInput').click()">CSVインポート</button>
             </div>
-            <div class="control-group">
-                <label for="firstWeekPages">第1週開始ページ数:</label>
-                <input type="number" id="firstWeekPages" min="1" max="10" value="7" />
-            </div>
-            <button onclick="resetSchedule()">スケジュールをリセット</button>
-            <button onclick="exportSchedule()">CSVエクスポート</button>
-            <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleFileSelect(event)">
-            <button onclick="document.getElementById('csvFileInput').click()">CSVインポート</button>
-        </div>
-        
-        <!-- ページ・タスク管理アコーディオン -->
-        <div class="accordion">
-            <div class="accordion-header" onclick="toggleAccordion('pageManagement')">
-                <h3 class="accordion-title">
-                    📝 ページ・タスク管理
-                </h3>
-                <span class="accordion-icon">▼</span>
-            </div>
-            <div class="accordion-content" id="pageManagement">
-                <div class="accordion-body">
-                    <div style="display: flex; gap: 20px;">
+            
+            <!-- ページ・タスク管理アコーディオン -->
+            <div class="accordion" style="margin-bottom: 30px;">
+                <div class="accordion-header" onclick="toggleAccordion('pageManagement')">
+                    <h3 class="accordion-title">
+                        📝 ページ・タスク管理
+                    </h3>
+                    <span class="accordion-icon">▼</span>
+                </div>
+                <div class="accordion-content" id="pageManagement">
+                    <div class="accordion-body">
                         <!-- ページ追加フォーム -->
-                        <div style="flex: 1;">
+                        <div style="margin-bottom: 30px;">
                             <h4 style="margin-bottom: 15px; color: #667eea;">📄 ページを追加（1行1ページ）</h4>
                             <div class="form-field">
                                 <label for="pageTextArea">ページリスト</label>
-                                <textarea id="pageTextArea" rows="8"></textarea>
+                                <textarea id="pageTextArea" rows="6"></textarea>
                                 <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
                                     現在のページ一覧が雛形として表示されています
                                 </small>
@@ -867,11 +984,11 @@
                         </div>
                         
                         <!-- カスタムタスク追加フォーム -->
-                        <div style="flex: 1;">
+                        <div style="margin-bottom: 30px;">
                             <h4 style="margin-bottom: 15px; color: #667eea;">⚡ タスクを追加（1行1タスク）</h4>
                             <div class="form-field">
                                 <label for="taskTextArea">タスクリスト</label>
-                                <textarea id="taskTextArea" rows="8"></textarea>
+                                <textarea id="taskTextArea" rows="6"></textarea>
                                 <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
                                     シンプルに1行1タスクを入力してください
                                 </small>
@@ -881,98 +998,103 @@
                                 <button type="button" onclick="addCustomTasks()">タスクを追加</button>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- 追加されたページ・タスク一覧 -->
-                    <div style="margin-top: 30px;">
-                        <h4 style="margin-bottom: 15px; color: #667eea;">📋 追加されたアイテム</h4>
-                        <div id="addedItemsList" class="task-list">
-                            <!-- 動的に追加されたアイテムがここに表示されます -->
+                        
+                        <!-- 追加されたページ・タスク一覧 -->
+                        <div style="margin-top: 30px;">
+                            <h4 style="margin-bottom: 15px; color: #667eea;">📋 追加されたアイテム</h4>
+                            <div id="addedItemsList" class="task-list">
+                                <!-- 動的に追加されたアイテムがここに表示されます -->
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="stats-panel">
-            <h3>📈 プロジェクト統計</h3>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalPages">35</div>
-                    <div class="stat-label">総ページ数</div>
+            
+            <!-- 統計情報 -->
+            <div class="stats-panel" style="margin-bottom: 30px;">
+                <h3>📈 プロジェクト統計</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalPages">35</div>
+                        <div class="stat-label">総ページ数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="projectWeeks">18</div>
+                        <div class="stat-label">プロジェクト期間（週）</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalTasks">315</div>
+                        <div class="stat-label">総タスク数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="peakTasks">19</div>
+                        <div class="stat-label">最大週次タスク数</div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="projectWeeks">18</div>
-                    <div class="stat-label">プロジェクト期間（週）</div>
+                
+                <h4 style="margin-top: 30px; margin-bottom: 15px;">📊 スケジュール通りの進捗状況（理論値）</h4>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="completedPages">0</div>
+                        <div class="stat-label">完了予定ページ数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="inProgressPages">0</div>
+                        <div class="stat-label">進行中予定ページ数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="notStartedPages">35</div>
+                        <div class="stat-label">未着手予定ページ数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="completionRate">0%</div>
+                        <div class="stat-label">理論完了率</div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalTasks">315</div>
-                    <div class="stat-label">総タスク数</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="peakTasks">19</div>
-                    <div class="stat-label">最大週次タスク数</div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #3498db;"></div>
+                        <span>PCデザイン</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e74c3c;"></div>
+                        <span>SPデザイン</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #2ecc71;"></div>
+                        <span>コーディング</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #95a5a6;"></div>
+                        <span>クライアント確認</span>
+                    </div>
                 </div>
             </div>
             
-            <h4 style="margin-top: 30px; margin-bottom: 15px;">📊 スケジュール通りの進捗状況（理論値）</h4>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="completedPages">0</div>
-                    <div class="stat-label">完了予定ページ数</div>
+            <!-- 週次タスク量推移 -->
+            <div class="chart-panel">
+                <h3 style="margin: 0 0 10px 0;">📊 週次タスク量推移</h3>
+                <div class="chart-container">
+                    <canvas id="taskChart"></canvas>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="inProgressPages">0</div>
-                    <div class="stat-label">進行中予定ページ数</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="notStartedPages">35</div>
-                    <div class="stat-label">未着手予定ページ数</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="completionRate">0%</div>
-                    <div class="stat-label">理論完了率</div>
-                </div>
-            </div>
-            
-            <div class="legend">
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #3498db;"></div>
-                    <span>PCデザイン</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #e74c3c;"></div>
-                    <span>SPデザイン</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #2ecc71;"></div>
-                    <span>コーディング</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #95a5a6;"></div>
-                    <span>クライアント確認</span>
-                </div>
-            </div>
-        </div>
-        
-    </div>
-    
-    <div class="chart-panel">
-        <div class="container">
-            <h3 style="margin: 0 0 10px 0;">📊 週次タスク量推移</h3>
-            <div class="chart-container">
-                <canvas id="taskChart"></canvas>
             </div>
         </div>
     </div>
     
     <div class="tooltip" id="tooltip"></div>
     
-    <!-- ヘルプボタン -->
-    <button class="help-button" onclick="showShortcutHelp()">
-        ?
-        <div class="help-tooltip">? キーでショートカット表示</div>
-    </button>
+    <!-- フローティングボタン -->
+    <div class="floating-buttons">
+        <button class="floating-button menu-button" onclick="toggleDrawer()">
+            ⚙️
+            <div class="help-tooltip">設定メニュー</div>
+        </button>
+        <button class="floating-button help-button" onclick="showShortcutHelp()">
+            ?
+            <div class="help-tooltip">? キーでショートカット表示</div>
+        </button>
+    </div>
     
     <!-- モーダル -->
     <div class="modal-overlay" id="modalOverlay">

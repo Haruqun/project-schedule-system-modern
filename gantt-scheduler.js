@@ -1209,19 +1209,22 @@ function onKeyDown(e) {
             return newWeek >= 0 && newWeek < scheduleData.totalWeeks;
         });
         
-        if (canMove) {
-            // キーボード移動では単純移動を使用（押し出し機能は使わない）
+        if (weekDelta < 0) {
+            // 左移動の場合は押し出し機能を使用
+            moveTaskGroupWithPush(relatedTasks, weekDelta);
+        } else if (canMove) {
+            // 右移動の場合は単純移動を使用
             moveTaskGroupSimple(relatedTasks, weekDelta);
-            
-            // 選択を維持
-            setTimeout(() => {
-                const newElement = document.querySelector(`[data-task-id="${selectedTask.id}"]`);
-                if (newElement) {
-                    newElement.classList.add('selected');
-                    newElement.focus();
-                }
-            }, 100);
         }
+        
+        // 選択を維持
+        setTimeout(() => {
+            const newElement = document.querySelector(`[data-task-id="${selectedTask.id}"]`);
+            if (newElement) {
+                newElement.classList.add('selected');
+                newElement.focus();
+            }
+        }, 100);
     }
 }
 
@@ -1541,8 +1544,30 @@ document.getElementById('modalOverlay').addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeModal();
+        closeDrawer();
     }
 });
+
+// ドロワー制御関数
+function toggleDrawer() {
+    const drawer = document.getElementById('drawer');
+    const overlay = document.getElementById('drawerOverlay');
+    
+    if (drawer.classList.contains('active')) {
+        closeDrawer();
+    } else {
+        drawer.classList.add('active');
+        overlay.classList.add('active');
+    }
+}
+
+function closeDrawer() {
+    const drawer = document.getElementById('drawer');
+    const overlay = document.getElementById('drawerOverlay');
+    
+    drawer.classList.remove('active');
+    overlay.classList.remove('active');
+}
 
 // アコーディオン機能
 function toggleAccordion(id) {
