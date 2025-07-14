@@ -330,6 +330,12 @@ function renderTimeline() {
     const timeline = document.getElementById('ganttTimeline');
     timeline.innerHTML = '';
     
+    // サイドバー分のスペースを追加
+    const sidebarSpace = document.createElement('div');
+    sidebarSpace.style.minWidth = '300px';
+    sidebarSpace.style.background = '#667eea';
+    timeline.appendChild(sidebarSpace);
+    
     const taskLimit = parseInt(document.getElementById('taskLimit').value) || 15;
     
     for (let week = 0; week < scheduleData.totalWeeks; week++) {
