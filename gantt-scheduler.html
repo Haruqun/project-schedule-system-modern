@@ -105,8 +105,10 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             position: relative;
-            max-height: 70vh;
+            max-height: calc(100vh - 200px);
             overflow-y: auto;
+            /* スティッキーヘッダー対応 */
+            overflow-x: hidden;
         }
         
         .gantt-wrapper {
@@ -126,6 +128,9 @@
             background: #667eea;
             color: white;
             font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
         
         .gantt-header-page {
@@ -143,6 +148,9 @@
             background: #667eea;
             color: white;
             min-width: max-content;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
         
         .timeline-week {

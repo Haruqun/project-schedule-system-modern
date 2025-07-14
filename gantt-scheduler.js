@@ -69,6 +69,7 @@ let dragState = {
 
 // 選択されたタスク
 let selectedTask = null;
+let selectedTaskId = null;
 
 // アンドゥ機能用の履歴
 let undoHistory = [];
@@ -512,6 +513,12 @@ function renderTasks() {
         taskElement.style.transform = 'translateY(-50%)';
         
         tasksContainer.appendChild(taskElement);
+        
+        // 選択状態を復元
+        if (selectedTaskId && task.id === selectedTaskId) {
+            taskElement.classList.add('selected');
+            selectedTask = task;
+        }
     });
 }
 
@@ -526,6 +533,13 @@ function createTaskElement(task) {
     
     // クリックイベント（選択）
     element.addEventListener('click', (e) => onTaskClick(e, task));
+    
+    // キーボードイベント（フォーカス時）
+    element.addEventListener('keydown', (e) => {
+        if (selectedTask && selectedTask.id === task.id) {
+            onKeyDown(e);
+        }
+    });
     
     // ドラッグイベント
     element.addEventListener('mousedown', onTaskMouseDown);
@@ -1137,6 +1151,7 @@ function onTaskClick(e, task) {
     taskElement.focus();
     
     selectedTask = task;
+    selectedTaskId = task.id;
 }
 
 // キーボードイベント処理
@@ -1185,8 +1200,8 @@ function onKeyDown(e) {
         });
         
         if (canMove) {
-            // キーボード移動では単純移動を使用（押し出し機能は使わない）
-            moveTaskGroupSimple(relatedTasks, weekDelta);
+            // キーボード移動でも押し出し機能を使用
+            moveTaskGroup(relatedTasks, weekDelta);
             
             // 選択を維持
             setTimeout(() => {
@@ -1207,6 +1222,7 @@ document.addEventListener('click', (e) => {
             el.classList.remove('selected');
         });
         selectedTask = null;
+        selectedTaskId = null;
     }
 });
 
