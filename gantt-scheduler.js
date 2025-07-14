@@ -70,6 +70,10 @@ let dragState = {
 // 選択されたタスク
 let selectedTask = null;
 
+// アンドゥ機能用の履歴
+let undoHistory = [];
+let maxUndoSteps = 50;
+
 
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {
@@ -665,6 +669,9 @@ function findRelatedTasks(task) {
 
 // タスクグループを移動（押し出し機能付き）
 function moveTaskGroup(taskGroup, weekDelta) {
+    // 状態を保存（アンドゥ用）
+    saveStateForUndo();
+    
     // 左移動（weekDelta < 0）の場合、押し出し処理を行う
     if (weekDelta < 0) {
         return moveTaskGroupWithPush(taskGroup, weekDelta);
@@ -1094,6 +1101,20 @@ function onTaskClick(e, task) {
 
 // キーボードイベント処理
 function onKeyDown(e) {
+    // Command/Ctrl + Z でアンドゥ
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        undoLastAction();
+        return;
+    }
+    
+    // ? キーでショートカット表示
+    if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        showShortcutHelp();
+        return;
+    }
+    
     if (!selectedTask) return;
     
     const cellWidth = 120;
@@ -1308,4 +1329,77 @@ function parseCSVLine(line) {
     
     result.push(current.trim());
     return result;
+}
+
+// 状態を保存（アンドゥ用）
+function saveStateForUndo() {
+    const currentState = {
+        tasks: JSON.parse(JSON.stringify(scheduleData.tasks)),
+        pageSchedules: JSON.parse(JSON.stringify(scheduleData.pageSchedules)),
+        weeklyTaskCounts: [...scheduleData.weeklyTaskCounts]
+    };
+    
+    undoHistory.push(currentState);
+    
+    // 履歴が多すぎる場合は古いものを削除
+    if (undoHistory.length > maxUndoSteps) {
+        undoHistory.shift();
+    }
+}
+
+// アンドゥ実行
+function undoLastAction() {
+    if (undoHistory.length === 0) {
+        alert('元に戻せる操作がありません。');
+        return;
+    }
+    
+    const previousState = undoHistory.pop();
+    
+    // 状態を復元
+    scheduleData.tasks = previousState.tasks;
+    scheduleData.pageSchedules = previousState.pageSchedules;
+    scheduleData.weeklyTaskCounts = previousState.weeklyTaskCounts;
+    
+    // 画面を再描画
+    const rowsContainer = document.getElementById('ganttRows');
+    rowsContainer.innerHTML = '';
+    renderPages();
+    renderTasks();
+    renderTimeline();
+    drawTaskChart();
+    updateStats();
+    
+    // 選択を解除
+    selectedTask = null;
+    document.querySelectorAll('.gantt-task.selected').forEach(el => {
+        el.classList.remove('selected');
+    });
+}
+
+// ショートカットヘルプを表示
+function showShortcutHelp() {
+    const helpText = `
+📊 ガントチャートスケジューラー - キーボードショートカット
+
+🖱️  基本操作:
+• クリック: タスクを選択
+• ドラッグ: タスクを移動
+
+⌨️  キーボード操作:
+• ← →: 選択したタスクを左右に移動
+• ${navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl'} + Z: 直前の操作を元に戻す
+• ?: このヘルプを表示
+
+✨ 自動機能:
+• 左移動時: 他のタスクを自動的に押し出し
+• 移動後: 同じページの後続タスクを前詰め
+• 連動移動: 関連タスクが自動的に一緒に移動
+
+💡 ヒント:
+• 週次タスク上限を設定して効率的にスケジュール管理
+• CSVエクスポート/インポートでデータを保存・共有
+    `;
+    
+    alert(helpText);
 }
