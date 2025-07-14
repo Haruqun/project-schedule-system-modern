@@ -324,6 +324,12 @@
             background: #95a5a6;
         }
         
+        .gantt-task.selected {
+            outline: 3px solid #e74c3c;
+            outline-offset: 2px;
+            z-index: 5;
+        }
+        
         .task-group {
             position: absolute;
             border: 2px dashed #667eea;
@@ -433,9 +439,13 @@
         .chart-panel {
             background: white;
             padding: 20px;
-            border-radius: 8px;
+            border-radius: 8px 8px 0 0;
             margin-top: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+            border-top: 3px solid #667eea;
         }
         
         .chart-container {
@@ -554,7 +564,10 @@
             </div>
         </div>
         
-        <div class="chart-panel">
+    </div>
+    
+    <div class="chart-panel">
+        <div class="container">
             <h3>📊 週次タスク量推移</h3>
             <div class="chart-container">
                 <canvas id="taskChart"></canvas>

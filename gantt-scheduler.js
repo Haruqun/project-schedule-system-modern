@@ -67,6 +67,9 @@ let dragState = {
     offsetX: 0
 };
 
+// 選択されたタスク
+let selectedTask = null;
+
 
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {
@@ -494,6 +497,10 @@ function createTaskElement(task) {
     element.dataset.taskId = task.id;
     element.dataset.week = task.week;
     element.textContent = task.text;
+    element.tabIndex = 0; // キーボードフォーカスを可能にする
+    
+    // クリックイベント（選択）
+    element.addEventListener('click', (e) => onTaskClick(e, task));
     
     // ドラッグイベント
     element.addEventListener('mousedown', onTaskMouseDown);
@@ -889,6 +896,9 @@ function setupEventListeners() {
         generateSchedule();
         renderGanttChart();
     });
+    
+    // キーボードイベント
+    document.addEventListener('keydown', onKeyDown);
 }
 
 // スケジュールリセット
@@ -919,3 +929,75 @@ function exportSchedule() {
     link.click();
 }
 
+// タスククリック時の処理
+function onTaskClick(e, task) {
+    e.stopPropagation();
+    
+    // 既存の選択を解除
+    document.querySelectorAll('.gantt-task.selected').forEach(el => {
+        el.classList.remove('selected');
+    });
+    
+    // クリックしたタスクを選択
+    const taskElement = e.currentTarget;
+    taskElement.classList.add('selected');
+    taskElement.focus();
+    
+    selectedTask = task;
+}
+
+// キーボードイベント処理
+function onKeyDown(e) {
+    if (!selectedTask) return;
+    
+    const cellWidth = 120;
+    const reviewCellWidth = 60;
+    let weekDelta = 0;
+    
+    switch(e.key) {
+        case 'ArrowLeft':
+            weekDelta = -1;
+            e.preventDefault();
+            break;
+        case 'ArrowRight':
+            weekDelta = 1;
+            e.preventDefault();
+            break;
+        default:
+            return;
+    }
+    
+    if (weekDelta !== 0) {
+        // 関連タスクを取得
+        const relatedTasks = findRelatedTasks(selectedTask);
+        
+        // 移動可能かチェック
+        const canMove = relatedTasks.every(task => {
+            const newWeek = task.week + weekDelta;
+            return newWeek >= 0 && newWeek < scheduleData.totalWeeks;
+        });
+        
+        if (canMove) {
+            moveTaskGroup(relatedTasks, weekDelta);
+            
+            // 選択を維持
+            setTimeout(() => {
+                const newElement = document.querySelector(`[data-task-id="${selectedTask.id}"]`);
+                if (newElement) {
+                    newElement.classList.add('selected');
+                    newElement.focus();
+                }
+            }, 100);
+        }
+    }
+}
+
+// クリックで選択解除
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.gantt-task')) {
+        document.querySelectorAll('.gantt-task.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+        selectedTask = null;
+    }
+});
