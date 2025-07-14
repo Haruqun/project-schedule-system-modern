@@ -1679,14 +1679,24 @@ function populatePageTemplate() {
 }
 
 function populateTaskTemplate() {
-    // 簡単なタスクサンプルを表示
-    const sampleTasks = [
-        '特別レビュー',
-        '追加修正',
-        '最終確認',
-        'クライアント打ち合わせ'
-    ];
-    document.getElementById('taskTextArea').value = sampleTasks.join('\n');
+    // 現在のタスクリストを表示
+    const currentTasks = scheduleData.tasks
+        .map(task => task.text)
+        .filter((text, index, arr) => arr.indexOf(text) === index) // 重複除去
+        .sort();
+    
+    if (currentTasks.length > 0) {
+        document.getElementById('taskTextArea').value = currentTasks.join('\n');
+    } else {
+        // タスクがない場合はサンプルを表示
+        const sampleTasks = [
+            '特別レビュー',
+            '追加修正',
+            '最終確認',
+            'クライアント打ち合わせ'
+        ];
+        document.getElementById('taskTextArea').value = sampleTasks.join('\n');
+    }
 }
 
 // タスクページオプションを更新
