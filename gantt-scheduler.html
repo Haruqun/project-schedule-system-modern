@@ -142,7 +142,7 @@
         .gantt-chart {
             flex: 1;
             position: relative;
-            min-width: max-content;
+            overflow-x: auto;
         }
         
         .gantt-timeline {
@@ -152,6 +152,7 @@
             position: sticky;
             top: 0;
             z-index: 15;
+            min-width: max-content;
         }
         
         .timeline-week {
@@ -190,6 +191,7 @@
         
         .gantt-rows {
             position: relative;
+            min-width: max-content;
         }
         
         .gantt-row {
@@ -387,6 +389,25 @@
             font-size: 11px;
             font-weight: 600;
         }
+        
+        .chart-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 20px;
+        }
+        
+        #taskChart {
+            width: 100%;
+            height: 100%;
+        }
     </style>
 </head>
 <body>
@@ -470,6 +491,13 @@
                     <div class="legend-color" style="background: #95a5a6;"></div>
                     <span>クライアント確認</span>
                 </div>
+            </div>
+        </div>
+        
+        <div class="chart-panel">
+            <h3>📊 週次タスク量推移</h3>
+            <div class="chart-container">
+                <canvas id="taskChart"></canvas>
             </div>
         </div>
     </div>

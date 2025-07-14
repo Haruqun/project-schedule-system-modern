@@ -306,6 +306,7 @@ function renderGanttChart() {
     renderPages();
     renderTasks();
     addTodayLine();
+    drawTaskChart();
 }
 
 // タイムライン描画
@@ -313,15 +314,27 @@ function renderTimeline() {
     const timeline = document.getElementById('ganttTimeline');
     timeline.innerHTML = '';
     
+    const taskLimit = parseInt(document.getElementById('taskLimit').value) || 15;
+    
     for (let week = 0; week < scheduleData.totalWeeks; week++) {
         const weekDate = new Date(scheduleData.startDate);
         weekDate.setDate(weekDate.getDate() + week * 7);
         
         const weekCell = document.createElement('div');
         weekCell.className = 'timeline-week';
+        
+        // 週次タスク数を取得
+        const weekTasks = scheduleData.weeklyTaskCounts[week] || 0;
+        const isOverLimit = taskLimit > 0 && weekTasks > taskLimit;
+        
+        if (isOverLimit) {
+            weekCell.classList.add('over-limit');
+        }
+        
         weekCell.innerHTML = `
             <div class="week-number">第${week + 1}週</div>
             <div class="week-date">${formatDateJP(weekDate)}</div>
+            <div class="week-tasks">${weekTasks}タスク</div>
         `;
         timeline.appendChild(weekCell);
     }
@@ -557,6 +570,8 @@ function moveTaskGroup(taskGroup, weekDelta) {
     rowsContainer.innerHTML = '';
     renderPages();
     renderTasks();
+    renderTimeline(); // タイムラインも更新して週次タスク数を反映
+    drawTaskChart(); // グラフも更新
     
     // 統計を更新
     updateStats();
@@ -601,6 +616,106 @@ function updateStats() {
     document.getElementById('projectWeeks').textContent = scheduleData.totalWeeks;
     document.getElementById('totalTasks').textContent = scheduleData.tasks.filter(t => t.owner === 'ecbeing').length;
     document.getElementById('peakTasks').textContent = Math.max(...scheduleData.weeklyTaskCounts);
+}
+
+// タスク量グラフ描画
+function drawTaskChart() {
+    const canvas = document.getElementById('taskChart');
+    const ctx = canvas.getContext('2d');
+    
+    // キャンバスサイズ設定
+    canvas.width = canvas.offsetWidth;
+    canvas.height = 300;
+    
+    const data = scheduleData.weeklyTaskCounts;
+    const taskLimit = parseInt(document.getElementById('taskLimit').value) || 15;
+    const maxTasks = Math.max(...data, taskLimit);
+    const padding = 40;
+    const chartWidth = canvas.width - 2 * padding;
+    const chartHeight = canvas.height - 2 * padding;
+    const barWidth = (chartWidth / data.length) * 0.7;
+    const spacing = chartWidth / data.length;
+    
+    // 背景をクリア
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // グリッド線とY軸ラベル
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 1;
+    ctx.font = '12px Arial';
+    ctx.fillStyle = '#666';
+    
+    for (let i = 0; i <= 5; i++) {
+        const y = padding + (chartHeight / 5) * i;
+        const value = Math.round((maxTasks * (5 - i)) / 5);
+        
+        // グリッド線
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(canvas.width - padding, y);
+        ctx.stroke();
+        
+        // Y軸ラベル
+        ctx.textAlign = 'right';
+        ctx.fillText(value, padding - 10, y + 4);
+    }
+    
+    // タスク上限ライン
+    if (taskLimit > 0) {
+        const limitY = padding + chartHeight - (taskLimit / maxTasks) * chartHeight;
+        ctx.strokeStyle = '#e74c3c';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(padding, limitY);
+        ctx.lineTo(canvas.width - padding, limitY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // ラベル
+        ctx.fillStyle = '#e74c3c';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`上限: ${taskLimit}`, canvas.width - padding + 10, limitY + 4);
+    }
+    
+    // バー描画
+    data.forEach((tasks, week) => {
+        const x = padding + week * spacing + (spacing - barWidth) / 2;
+        const barHeight = (tasks / maxTasks) * chartHeight;
+        const y = padding + chartHeight - barHeight;
+        
+        // バーの色（上限超過は赤）
+        const isOverLimit = taskLimit > 0 && tasks > taskLimit;
+        ctx.fillStyle = isOverLimit ? '#e74c3c' : '#3498db';
+        ctx.fillRect(x, y, barWidth, barHeight);
+        
+        // タスク数表示
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        if (tasks > 0) {
+            ctx.fillText(tasks, x + barWidth / 2, y - 5);
+        }
+        
+        // X軸ラベル（週番号）
+        ctx.fillStyle = '#666';
+        ctx.font = '11px Arial';
+        ctx.fillText(`${week + 1}`, x + barWidth / 2, padding + chartHeight + 15);
+    });
+    
+    // 軸ラベル
+    ctx.fillStyle = '#333';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('週', canvas.width / 2, canvas.height - 5);
+    
+    ctx.save();
+    ctx.translate(15, canvas.height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('タスク数', 0, 0);
+    ctx.restore();
 }
 
 // イベントリスナー設定
