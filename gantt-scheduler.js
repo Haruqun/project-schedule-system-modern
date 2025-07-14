@@ -1350,7 +1350,7 @@ function saveStateForUndo() {
 // アンドゥ実行
 function undoLastAction() {
     if (undoHistory.length === 0) {
-        alert('元に戻せる操作がありません。');
+        showModal('元に戻す', '<p style="text-align: center; color: #666; font-size: 16px;">元に戻せる操作がありません。</p>');
         return;
     }
     
@@ -1379,27 +1379,100 @@ function undoLastAction() {
 
 // ショートカットヘルプを表示
 function showShortcutHelp() {
-    const helpText = `
-📊 ガントチャートスケジューラー - キーボードショートカット
-
-🖱️  基本操作:
-• クリック: タスクを選択
-• ドラッグ: タスクを移動
-
-⌨️  キーボード操作:
-• ← →: 選択したタスクを左右に移動
-• ${navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl'} + Z: 直前の操作を元に戻す
-• ?: このヘルプを表示
-
-✨ 自動機能:
-• 左移動時: 他のタスクを自動的に押し出し
-• 移動後: 同じページの後続タスクを前詰め
-• 連動移動: 関連タスクが自動的に一緒に移動
-
-💡 ヒント:
-• 週次タスク上限を設定して効率的にスケジュール管理
-• CSVエクスポート/インポートでデータを保存・共有
+    const isMac = navigator.platform.includes('Mac');
+    const cmdKey = isMac ? 'Cmd' : 'Ctrl';
+    
+    const helpContent = `
+        <div class="shortcut-section">
+            <h3>🖱️ 基本操作</h3>
+            <ul class="shortcut-list">
+                <li class="shortcut-item">
+                    <span class="shortcut-key">クリック</span>
+                    <span class="shortcut-desc">タスクを選択</span>
+                </li>
+                <li class="shortcut-item">
+                    <span class="shortcut-key">ドラッグ</span>
+                    <span class="shortcut-desc">タスクを移動</span>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="shortcut-section">
+            <h3>⌨️ キーボード操作</h3>
+            <ul class="shortcut-list">
+                <li class="shortcut-item">
+                    <span class="shortcut-key">← →</span>
+                    <span class="shortcut-desc">選択したタスクを左右に移動</span>
+                </li>
+                <li class="shortcut-item">
+                    <span class="shortcut-key">${cmdKey} + Z</span>
+                    <span class="shortcut-desc">直前の操作を元に戻す</span>
+                </li>
+                <li class="shortcut-item">
+                    <span class="shortcut-key">?</span>
+                    <span class="shortcut-desc">このヘルプを表示</span>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="shortcut-section">
+            <h3>✨ 自動機能</h3>
+            <ul class="shortcut-list">
+                <li class="shortcut-item">
+                    <span class="shortcut-key">左移動時</span>
+                    <span class="shortcut-desc">他のタスクを自動的に押し出し</span>
+                </li>
+                <li class="shortcut-item">
+                    <span class="shortcut-key">移動後</span>
+                    <span class="shortcut-desc">同じページの後続タスクを前詰め</span>
+                </li>
+                <li class="shortcut-item">
+                    <span class="shortcut-key">連動移動</span>
+                    <span class="shortcut-desc">関連タスクが自動的に一緒に移動</span>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="shortcut-section">
+            <h3>💡 ヒント</h3>
+            <ul class="shortcut-list">
+                <li class="shortcut-item">
+                    <span class="shortcut-key">週次上限</span>
+                    <span class="shortcut-desc">週次タスク上限を設定して効率的にスケジュール管理</span>
+                </li>
+                <li class="shortcut-item">
+                    <span class="shortcut-key">CSV機能</span>
+                    <span class="shortcut-desc">エクスポート/インポートでデータを保存・共有</span>
+                </li>
+            </ul>
+        </div>
     `;
     
-    alert(helpText);
+    showModal('📊 キーボードショートカット', helpContent);
 }
+
+// モーダル表示
+function showModal(title, content) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalContent').innerHTML = content;
+    document.getElementById('modalOverlay').style.display = 'flex';
+}
+
+// モーダル閉じる
+function closeModal() {
+    document.getElementById('modalOverlay').style.display = 'none';
+}
+
+// オーバーレイクリックで閉じる
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('modalOverlay')) {
+        closeModal();
+    }
+});
+
+// Escキーで閉じる
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeModal();
+    }
+});
