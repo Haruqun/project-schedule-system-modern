@@ -216,6 +216,8 @@
         .gantt-rows {
             position: relative;
             min-width: max-content;
+            flex: 1;
+            overflow-x: auto;
         }
         
         .gantt-row {
@@ -478,15 +480,14 @@
         
         <div class="gantt-container">
             <div class="gantt-wrapper">
-                <div class="gantt-sidebar">
-                    <div class="gantt-header">
-                        <div class="gantt-header-page">ページ名</div>
-                    </div>
-                    <div id="ganttPages"></div>
-                </div>
                 <div class="gantt-chart">
                     <div class="gantt-timeline" id="ganttTimeline"></div>
-                    <div class="gantt-rows" id="ganttRows"></div>
+                    <div style="display: flex;">
+                        <div class="gantt-sidebar">
+                            <div id="ganttPages"></div>
+                        </div>
+                        <div class="gantt-rows" id="ganttRows"></div>
+                    </div>
                 </div>
             </div>
         </div>

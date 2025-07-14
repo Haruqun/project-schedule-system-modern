@@ -411,11 +411,6 @@ function renderPages() {
     pagesContainer.innerHTML = '';
     rowsContainer.innerHTML = '';
     
-    // ヘッダー行を追加（空の行）
-    const headerRow = document.createElement('div');
-    headerRow.style.height = '120px'; // タイムラインヘッダーの高さに合わせる
-    rowsContainer.appendChild(headerRow);
-    
     projectData.pages.forEach((pageName, index) => {
         // サイドバーのページ情報
         const pageInfo = document.createElement('div');
@@ -468,8 +463,7 @@ function renderTasks() {
     });
     
     sortedTasks.forEach(task => {
-        // ヘッダー行があるので、インデックスに+1する
-        const row = rowsContainer.children[task.pageIndex + 1];
+        const row = rowsContainer.children[task.pageIndex];
         if (!row) {
             console.warn(`No row found for pageIndex ${task.pageIndex}, page: ${task.pageName}`);
             return;
