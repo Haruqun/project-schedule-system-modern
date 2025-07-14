@@ -254,7 +254,7 @@ function generateTasks(pageDistribution) {
                 
                 // 提出タスク（第1週）
                 const submitTask = {
-                    id: taskId++,
+                    id: String(taskId++),
                     pageIndex: pageIndex,
                     pageName: pageName,
                     phase: phase.name,
@@ -270,7 +270,7 @@ function generateTasks(pageDistribution) {
                 
                 // 修正依頼タスク（週の間の列に配置）
                 const reviewTask = {
-                    id: taskId++,
+                    id: String(taskId++),
                     pageIndex: pageIndex,
                     pageName: pageName,
                     phase: phase.name,
@@ -288,7 +288,7 @@ function generateTasks(pageDistribution) {
                 
                 // 修正版提出&確定タスク（第2週）
                 const revisionTask = {
-                    id: taskId++,
+                    id: String(taskId++),
                     pageIndex: pageIndex,
                     pageName: pageName,
                     phase: phase.name,
@@ -549,8 +549,8 @@ function onTaskMouseDown(e) {
     e.preventDefault();
     
     const taskElement = e.currentTarget;
-    const taskId = parseInt(taskElement.dataset.taskId);
-    const task = scheduleData.tasks.find(t => t.id === taskId);
+    const taskId = taskElement.dataset.taskId;
+    const task = scheduleData.tasks.find(t => String(t.id) === taskId);
     
     if (!task) return;
     
