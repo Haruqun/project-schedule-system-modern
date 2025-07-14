@@ -833,6 +833,19 @@
 </head>
 <body>
     <div class="container">
+        <!-- ガントチャートを最上部に配置 -->
+        <div class="gantt-container">
+            <div class="gantt-wrapper">
+                <div class="gantt-timeline" id="ganttTimeline"></div>
+                <div style="display: flex;">
+                    <div class="gantt-sidebar">
+                        <div id="ganttPages"></div>
+                    </div>
+                    <div class="gantt-rows" id="ganttRows"></div>
+                </div>
+            </div>
+        </div>
+        
         <header>
             <h1>📊 ガントチャート式プロジェクトスケジューラー</h1>
             <div class="header-info">
@@ -912,18 +925,6 @@
                             <!-- 動的に追加されたアイテムがここに表示されます -->
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="gantt-container">
-            <div class="gantt-wrapper">
-                <div class="gantt-timeline" id="ganttTimeline"></div>
-                <div style="display: flex;">
-                    <div class="gantt-sidebar">
-                        <div id="ganttPages"></div>
-                    </div>
-                    <div class="gantt-rows" id="ganttRows"></div>
                 </div>
             </div>
         </div>
