@@ -98,6 +98,11 @@
             margin: 0;
             border-radius: 0;
             box-shadow: none;
+            transition: right 0.3s ease;
+        }
+        
+        .gantt-container.drawer-open {
+            right: 400px; /* ドロワーの幅分だけ縮める */
         }
         
         .gantt-wrapper {
@@ -799,13 +804,14 @@
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
+            right: 400px; /* ドロワー幅分だけ除外 */
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.2);
             z-index: 998;
             opacity: 0;
             visibility: hidden;
             transition: all 0.3s ease;
+            pointer-events: none; /* テーブル操作を妨げない */
         }
         
         .drawer-overlay.active {

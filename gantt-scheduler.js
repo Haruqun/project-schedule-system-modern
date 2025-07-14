@@ -1552,21 +1552,25 @@ document.addEventListener('keydown', (e) => {
 function toggleDrawer() {
     const drawer = document.getElementById('drawer');
     const overlay = document.getElementById('drawerOverlay');
+    const ganttContainer = document.querySelector('.gantt-container');
     
     if (drawer.classList.contains('active')) {
         closeDrawer();
     } else {
         drawer.classList.add('active');
         overlay.classList.add('active');
+        ganttContainer.classList.add('drawer-open');
     }
 }
 
 function closeDrawer() {
     const drawer = document.getElementById('drawer');
     const overlay = document.getElementById('drawerOverlay');
+    const ganttContainer = document.querySelector('.gantt-container');
     
     drawer.classList.remove('active');
     overlay.classList.remove('active');
+    ganttContainer.classList.remove('drawer-open');
 }
 
 // アコーディオン機能
