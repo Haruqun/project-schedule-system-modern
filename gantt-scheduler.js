@@ -719,7 +719,6 @@ function moveTaskGroupWithPush(taskGroup, weekDelta) {
     // 各ページについて、影響を受けるタスクを特定
     Object.values(scheduleData.pageSchedules).forEach(pageSchedule => {
         const pageTasks = pageSchedule.tasks;
-        let shouldPush = false;
         
         // このページのタスクで移動対象のものがあるかチェック
         const hasMovingTask = pageTasks.some(t => taskGroupIds.has(t.id));
@@ -728,7 +727,6 @@ function moveTaskGroupWithPush(taskGroup, weekDelta) {
             // 移動対象タスクより前にあるタスクを収集
             pageTasks.forEach(task => {
                 if (!taskGroupIds.has(task.id) && task.week >= targetWeek && task.week < minWeek) {
-                    shouldPush = true;
                     affectedTasks.push(task);
                 }
             });
@@ -747,6 +745,9 @@ function moveTaskGroupWithPush(taskGroup, weekDelta) {
     taskGroup.forEach(task => {
         task.week += weekDelta;
     });
+    
+    // スケジュール最適化：空いた週があれば後続タスクを前に詰める
+    optimizeScheduleAfterMove();
     
     // 全タスクが範囲内にあるか確認
     const allTasksValid = scheduleData.tasks.every(task => 
@@ -778,6 +779,56 @@ function moveTaskGroupWithPush(taskGroup, weekDelta) {
     
     // 統計を更新
     updateStats();
+}
+
+// スケジュール最適化：空いた週があれば後続タスクを前に詰める
+function optimizeScheduleAfterMove() {
+    const taskLimit = parseInt(document.getElementById('taskLimit').value) || 15;
+    
+    // 週ごとのタスク数を計算
+    const weeklyTaskCounts = new Array(scheduleData.totalWeeks).fill(0);
+    scheduleData.tasks.forEach(task => {
+        if (task.owner === 'ecbeing' && task.week < scheduleData.totalWeeks) {
+            weeklyTaskCounts[task.week]++;
+        }
+    });
+    
+    // ページごとにタスクをソート（開始週順）
+    Object.values(scheduleData.pageSchedules).forEach(pageSchedule => {
+        pageSchedule.tasks.sort((a, b) => a.week - b.week);
+    });
+    
+    // 全タスクを週順にソート
+    const allTasks = [...scheduleData.tasks].sort((a, b) => a.week - b.week);
+    
+    // 各タスクについて、より早い週に移動できるかチェック
+    allTasks.forEach(task => {
+        if (task.owner !== 'ecbeing') return;
+        
+        const currentWeek = task.week;
+        
+        // 同じページの前のタスクの最終週を取得
+        const pageTasks = scheduleData.pageSchedules[task.pageName].tasks;
+        const taskIndex = pageTasks.findIndex(t => t.id === task.id);
+        
+        let minAllowedWeek = 0;
+        if (taskIndex > 0) {
+            // 前のタスクの週の次週以降でないといけない
+            const prevTask = pageTasks[taskIndex - 1];
+            minAllowedWeek = prevTask.week + 1;
+        }
+        
+        // より早い週を探す
+        for (let week = minAllowedWeek; week < currentWeek; week++) {
+            if (weeklyTaskCounts[week] < taskLimit) {
+                // この週に移動可能
+                weeklyTaskCounts[currentWeek]--;
+                weeklyTaskCounts[week]++;
+                task.week = week;
+                break;
+            }
+        }
+    });
 }
 
 // 週次タスク数を再計算
