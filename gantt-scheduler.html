@@ -583,6 +583,193 @@
             transform: translateY(0);
         }
         
+        .accordion {
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+        
+        .accordion-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e0e0e0;
+            transition: background-color 0.3s;
+        }
+        
+        .accordion-header:hover {
+            background: #e9ecef;
+        }
+        
+        .accordion-header.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .accordion-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .accordion-icon {
+            font-size: 12px;
+            transition: transform 0.3s;
+        }
+        
+        .accordion-header.active .accordion-icon {
+            transform: rotate(180deg);
+        }
+        
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        
+        .accordion-content.active {
+            max-height: 800px;
+        }
+        
+        .accordion-body {
+            padding: 20px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .form-field label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .form-field input,
+        .form-field select,
+        .form-field textarea {
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-field input:focus,
+        .form-field select:focus,
+        .form-field textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-field textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #f0f0f0;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .task-list {
+            margin-top: 20px;
+        }
+        
+        .task-item {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .task-info {
+            flex: 1;
+        }
+        
+        .task-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .task-details {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .task-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-edit {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-edit:hover {
+            background: #218838;
+        }
+        
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background: #c82333;
+        }
+        
         .grid-line {
             position: absolute;
             top: 0;
@@ -664,6 +851,61 @@
             <button onclick="exportSchedule()">CSVエクスポート</button>
             <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleFileSelect(event)">
             <button onclick="document.getElementById('csvFileInput').click()">CSVインポート</button>
+        </div>
+        
+        <!-- ページ・タスク管理アコーディオン -->
+        <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion('pageManagement')">
+                <h3 class="accordion-title">
+                    📝 ページ・タスク管理
+                </h3>
+                <span class="accordion-icon">▼</span>
+            </div>
+            <div class="accordion-content" id="pageManagement">
+                <div class="accordion-body">
+                    <div style="display: flex; gap: 20px;">
+                        <!-- ページ追加フォーム -->
+                        <div style="flex: 1;">
+                            <h4 style="margin-bottom: 15px; color: #667eea;">📄 ページを追加（1行1ページ）</h4>
+                            <div class="form-field">
+                                <label for="pageTextArea">ページリスト</label>
+                                <textarea id="pageTextArea" rows="8" placeholder="商品詳細ページ(product_detail)&#10;会員登録ページ(member_register)&#10;お問い合わせページ(contact)&#10;...1行につき1ページを入力してください"></textarea>
+                                <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+                                    現在のページ一覧が雛形として表示されています
+                                </small>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" onclick="clearPageForm()">クリア</button>
+                                <button type="button" onclick="addNewPages()">ページを追加</button>
+                            </div>
+                        </div>
+                        
+                        <!-- カスタムタスク追加フォーム -->
+                        <div style="flex: 1;">
+                            <h4 style="margin-bottom: 15px; color: #667eea;">⚡ タスクを追加（1行1タスク）</h4>
+                            <div class="form-field">
+                                <label for="taskTextArea">タスクリスト</label>
+                                <textarea id="taskTextArea" rows="8" placeholder="特別レビュー&#10;追加修正&#10;最終確認&#10;...1行につき1タスクを入力してください"></textarea>
+                                <small style="color: #666; font-size: 12px; margin-top: 5px; display: block;">
+                                    シンプルに1行1タスクを入力してください
+                                </small>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn-secondary" onclick="clearTaskForm()">クリア</button>
+                                <button type="button" onclick="addCustomTasks()">タスクを追加</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 追加されたページ・タスク一覧 -->
+                    <div style="margin-top: 30px;">
+                        <h4 style="margin-bottom: 15px; color: #667eea;">📋 追加されたアイテム</h4>
+                        <div id="addedItemsList" class="task-list">
+                            <!-- 動的に追加されたアイテムがここに表示されます -->
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="gantt-container">

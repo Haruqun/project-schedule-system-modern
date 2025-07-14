@@ -87,12 +87,18 @@ function initializeScheduler() {
     document.getElementById('startDate').value = formatDate(nextWednesday);
     scheduleData.startDate = nextWednesday;
     
-    
     // スケジュールを生成
     generateSchedule();
     
     // ガントチャートを描画
     renderGanttChart();
+    
+    // タスクページオプションを初期化
+    updateTaskPageOptions();
+    
+    // フォームテンプレートを初期化
+    populatePageTemplate();
+    populateTaskTemplate();
     
     // イベントリスナーを設定
     setupEventListeners();
@@ -595,14 +601,16 @@ function onTaskMouseMove(e) {
     if (!dragState.isDragging) return;
     
     const deltaX = e.pageX - dragState.startX;
-    const weekDelta = Math.round(deltaX / 120); // セル幅で割る
+    const cellWidth = 120;
+    const reviewCellWidth = 60;
+    const totalCellWidth = cellWidth + reviewCellWidth; // 週セル + 修正依頼セル = 180px
+    const weekDelta = Math.round(deltaX / totalCellWidth);
     
     // プレビュー更新
     dragState.draggedGroup.forEach(task => {
         const element = document.querySelector(`[data-task-id="${task.id}"]`);
         if (element) {
-            const newWeek = task.week - dragState.startWeek + dragState.startWeek + weekDelta;
-            element.style.transform = `translateX(${weekDelta * 120}px)`;
+            element.style.transform = `translateX(${weekDelta * totalCellWidth}px)`;
         }
     });
 }
@@ -611,7 +619,10 @@ function onTaskMouseUp(e) {
     if (!dragState.isDragging) return;
     
     const deltaX = e.pageX - dragState.startX;
-    const weekDelta = Math.round(deltaX / 120);
+    const cellWidth = 120;
+    const reviewCellWidth = 60;
+    const totalCellWidth = cellWidth + reviewCellWidth; // 週セル + 修正依頼セル = 180px
+    const weekDelta = Math.round(deltaX / totalCellWidth);
     
     // タスクを移動
     if (weekDelta !== 0) {
@@ -708,6 +719,41 @@ function moveTaskGroup(taskGroup, weekDelta) {
     updateStats();
 }
 
+// タスクグループを単純移動（押し出し機能なし・キーボード用）
+function moveTaskGroupSimple(taskGroup, weekDelta) {
+    // 状態を保存（アンドゥ用）
+    saveStateForUndo();
+    
+    // 移動可能かチェック
+    const canMove = taskGroup.every(task => {
+        const newWeek = task.week + weekDelta;
+        return newWeek >= 0 && newWeek < scheduleData.totalWeeks;
+    });
+    
+    if (!canMove) {
+        return;
+    }
+    
+    // タスクを移動
+    taskGroup.forEach(task => {
+        task.week += weekDelta;
+    });
+    
+    // 週次タスク数を再計算
+    recalculateWeeklyTaskCounts();
+    
+    // 再描画
+    const rowsContainer = document.getElementById('ganttRows');
+    rowsContainer.innerHTML = '';
+    renderPages();
+    renderTasks();
+    renderTimeline();
+    drawTaskChart();
+    
+    // 統計を更新
+    updateStats();
+}
+
 // 押し出し機能付きのタスク移動
 function moveTaskGroupWithPush(taskGroup, weekDelta) {
     // 移動するタスクの最小週を取得
@@ -743,6 +789,17 @@ function moveTaskGroupWithPush(taskGroup, weekDelta) {
     // 押し出し量を計算（移動するタスクが占める週数）
     const pushAmount = Math.abs(weekDelta);
     
+    // 事前に境界チェック：影響を受けるタスクが範囲外に出ないかチェック
+    const wouldBeOutOfBounds = affectedTasks.some(task => {
+        const newWeek = task.week - pushAmount;
+        return newWeek < 0 || newWeek >= scheduleData.totalWeeks;
+    });
+    
+    if (wouldBeOutOfBounds) {
+        alert('タスクを押し出すとプロジェクト期間を超えてしまいます。');
+        return;
+    }
+    
     // 影響を受けるタスクを左に押し出す
     affectedTasks.forEach(task => {
         task.week -= pushAmount;
@@ -758,23 +815,6 @@ function moveTaskGroupWithPush(taskGroup, weekDelta) {
     movedPageNames.forEach(pageName => {
         optimizePageSchedule(pageName);
     });
-    
-    // 全タスクが範囲内にあるか確認
-    const allTasksValid = scheduleData.tasks.every(task => 
-        task.week >= 0 && task.week < scheduleData.totalWeeks
-    );
-    
-    if (!allTasksValid) {
-        // 元に戻す
-        affectedTasks.forEach(task => {
-            task.week += pushAmount;
-        });
-        taskGroup.forEach(task => {
-            task.week -= weekDelta;
-        });
-        alert('タスクを押し出すとプロジェクト期間を超えてしまいます。');
-        return;
-    }
     
     // 週次タスク数を再計算
     recalculateWeeklyTaskCounts();
@@ -1145,7 +1185,8 @@ function onKeyDown(e) {
         });
         
         if (canMove) {
-            moveTaskGroup(relatedTasks, weekDelta);
+            // キーボード移動では単純移動を使用（押し出し機能は使わない）
+            moveTaskGroupSimple(relatedTasks, weekDelta);
             
             // 選択を維持
             setTimeout(() => {
@@ -1476,3 +1517,257 @@ document.addEventListener('keydown', (e) => {
         closeModal();
     }
 });
+
+// アコーディオン機能
+function toggleAccordion(id) {
+    const content = document.getElementById(id);
+    const header = content.previousElementSibling;
+    
+    if (content.classList.contains('active')) {
+        content.classList.remove('active');
+        header.classList.remove('active');
+    } else {
+        content.classList.add('active');
+        header.classList.add('active');
+    }
+}
+
+// ページ追加機能（テキストエリア版）
+function addNewPages() {
+    const pageText = document.getElementById('pageTextArea').value.trim();
+    
+    if (!pageText) {
+        showModal('入力エラー', '<p style="color: #dc3545;">ページリストが入力されていません。</p>');
+        return;
+    }
+    
+    const lines = pageText.split('\n').filter(line => line.trim());
+    const newPages = [];
+    const errors = [];
+    
+    lines.forEach((line, index) => {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) return;
+        
+        // 形式チェック: ページ名(page_id) または ページ名
+        const match = trimmedLine.match(/^(.+?)\(([^)]+)\)$/) || trimmedLine.match(/^(.+)$/);
+        
+        if (!match) {
+            errors.push(`行${index + 1}: 形式が正しくありません`);
+            return;
+        }
+        
+        const pageName = match[1].trim();
+        const pageId = match[2] ? match[2].trim() : pageName.toLowerCase().replace(/\s+/g, '_');
+        
+        // 重複チェック
+        const exists = projectData.pages.some(page => page.includes(`(${pageId})`));
+        if (exists) {
+            errors.push(`行${index + 1}: ページID「${pageId}」は既に存在します`);
+            return;
+        }
+        
+        newPages.push(`${pageName}(${pageId})`);
+    });
+    
+    if (errors.length > 0) {
+        showModal('入力エラー', `<p style="color: #dc3545;">${errors.join('<br>')}</p>`);
+        return;
+    }
+    
+    if (newPages.length === 0) {
+        showModal('入力エラー', '<p style="color: #dc3545;">追加可能なページがありません。</p>');
+        return;
+    }
+    
+    // ページを追加
+    projectData.pages.push(...newPages);
+    
+    // ガントチャートを再生成
+    generateSchedule();
+    renderGanttChart();
+    updateTaskPageOptions();
+    
+    // フォームをクリア
+    clearPageForm();
+    
+    showModal('ページ追加完了', `<p style="color: #28a745;">${newPages.length}件のページを追加しました。</p>`);
+}
+
+// カスタムタスク追加機能（シンプル版）
+function addCustomTasks() {
+    const taskText = document.getElementById('taskTextArea').value.trim();
+    
+    if (!taskText) {
+        showModal('入力エラー', '<p style="color: #dc3545;">タスクリストが入力されていません。</p>');
+        return;
+    }
+    
+    const lines = taskText.split('\n').filter(line => line.trim());
+    const newTasks = [];
+    
+    lines.forEach((line, index) => {
+        const taskName = line.trim();
+        if (!taskName) return;
+        
+        // 最初のページに追加し、週1に配置、デフォルトはecbeingのpc-designタスクとする
+        const firstPage = projectData.pages[0];
+        
+        const newTask = {
+            id: `custom_${Date.now()}_${index}`,
+            pageIndex: 0,
+            pageName: firstPage,
+            phase: taskName,
+            phaseType: 'pc-design',
+            text: taskName,
+            week: 0, // 第1週
+            type: 'custom',
+            owner: 'ecbeing',
+            isReview: false
+        };
+        
+        newTasks.push(newTask);
+    });
+    
+    if (newTasks.length === 0) {
+        showModal('入力エラー', '<p style="color: #dc3545;">追加可能なタスクがありません。</p>');
+        return;
+    }
+    
+    // タスクを追加
+    scheduleData.tasks.push(...newTasks);
+    
+    // ページスケジュールに追加
+    newTasks.forEach(newTask => {
+        if (!scheduleData.pageSchedules[newTask.pageName]) {
+            scheduleData.pageSchedules[newTask.pageName] = { tasks: [] };
+        }
+        scheduleData.pageSchedules[newTask.pageName].tasks.push(newTask);
+    });
+    
+    // 週次タスク数を再計算
+    recalculateWeeklyTaskCounts();
+    
+    // ガントチャートを再描画
+    const rowsContainer = document.getElementById('ganttRows');
+    rowsContainer.innerHTML = '';
+    renderPages();
+    renderTasks();
+    renderTimeline();
+    drawTaskChart();
+    updateStats();
+    
+    // フォームをクリア
+    clearTaskForm();
+    
+    showModal('タスク追加完了', `<p style="color: #28a745;">${newTasks.length}件のタスクを追加しました。</p>`);
+}
+
+// フォームクリア機能
+function clearPageForm() {
+    populatePageTemplate();
+}
+
+function clearTaskForm() {
+    populateTaskTemplate();
+}
+
+// テンプレート表示機能
+function populatePageTemplate() {
+    const pageList = projectData.pages.join('\n');
+    document.getElementById('pageTextArea').value = pageList;
+}
+
+function populateTaskTemplate() {
+    // 簡単なタスクサンプルを表示
+    const sampleTasks = [
+        '特別レビュー',
+        '追加修正',
+        '最終確認',
+        'クライアント打ち合わせ'
+    ];
+    document.getElementById('taskTextArea').value = sampleTasks.join('\n');
+}
+
+// タスクページオプションを更新
+function updateTaskPageOptions() {
+    const select = document.getElementById('taskPage');
+    select.innerHTML = '<option value="">ページを選択...</option>';
+    
+    projectData.pages.forEach(page => {
+        const match = page.match(/\(([^)]+)\)$/);
+        if (match) {
+            const pageId = match[1];
+            const pageName = page.replace(/\([^)]+\)$/, '');
+            const option = document.createElement('option');
+            option.value = pageId;
+            option.textContent = pageName;
+            select.appendChild(option);
+        }
+    });
+}
+
+// アイテム一覧に追加
+function addToItemsList(type, data) {
+    const list = document.getElementById('addedItemsList');
+    const item = document.createElement('div');
+    item.className = 'task-item';
+    
+    if (type === 'page') {
+        item.innerHTML = `
+            <div class="task-info">
+                <div class="task-name">📄 ${data.name}</div>
+                <div class="task-details">ID: ${data.id} ${data.description ? '• ' + data.description : ''}</div>
+            </div>
+            <div class="task-actions">
+                <button class="btn-small btn-delete" onclick="removeItem(this, 'page', '${data.id}')">削除</button>
+            </div>
+        `;
+    } else if (type === 'task') {
+        item.innerHTML = `
+            <div class="task-info">
+                <div class="task-name">⚡ ${data.name}</div>
+                <div class="task-details">ページ: ${data.page} • 第${data.week}週 • ${data.type} • ${data.owner}</div>
+            </div>
+            <div class="task-actions">
+                <button class="btn-small btn-delete" onclick="removeItem(this, 'task', '${data.name}')">削除</button>
+            </div>
+        `;
+    }
+    
+    list.appendChild(item);
+}
+
+// アイテム削除
+function removeItem(button, type, id) {
+    const item = button.closest('.task-item');
+    if (confirm(`この${type === 'page' ? 'ページ' : 'タスク'}を削除しますか？`)) {
+        item.remove();
+        
+        if (type === 'page') {
+            // ページを削除
+            const pageIndex = projectData.pages.findIndex(page => page.includes(`(${id})`));
+            if (pageIndex !== -1) {
+                projectData.pages.splice(pageIndex, 1);
+                generateSchedule();
+                renderGanttChart();
+                updateTaskPageOptions();
+            }
+        } else if (type === 'task') {
+            // カスタムタスクを削除
+            const taskIndex = scheduleData.tasks.findIndex(task => task.text === id && task.type === 'custom');
+            if (taskIndex !== -1) {
+                scheduleData.tasks.splice(taskIndex, 1);
+                recalculateWeeklyTaskCounts();
+                
+                const rowsContainer = document.getElementById('ganttRows');
+                rowsContainer.innerHTML = '';
+                renderPages();
+                renderTasks();
+                renderTimeline();
+                drawTaskChart();
+                updateStats();
+            }
+        }
+    }
+}
