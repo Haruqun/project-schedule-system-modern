@@ -587,6 +587,9 @@ function addTodayLine() {
 function onTaskMouseDown(e) {
     e.preventDefault();
     
+    // ツールチップを隠す
+    hideTooltip();
+    
     const taskElement = e.currentTarget;
     const taskId = taskElement.dataset.taskId;
     const task = scheduleData.tasks.find(t => String(t.id) === taskId);
@@ -631,6 +634,9 @@ function onTaskMouseMove(e) {
 
 function onTaskMouseUp(e) {
     if (!dragState.isDragging) return;
+    
+    // ツールチップを隠す
+    hideTooltip();
     
     const deltaX = e.pageX - dragState.startX;
     const cellWidth = 120;
@@ -779,28 +785,29 @@ function moveTaskGroupWithPush(taskGroup, weekDelta) {
         return;
     }
     
-    // 影響を受ける可能性のあるタスクを収集
+    // 影響を受ける可能性のあるタスクを収集（同じページのタスクのみ）
     const affectedTasks = [];
     const taskGroupIds = new Set(taskGroup.map(t => t.id));
+    const movingPageNames = [...new Set(taskGroup.map(t => t.pageName))];
     
-    // 各ページについて、影響を受けるタスクを特定
-    Object.values(scheduleData.pageSchedules).forEach(pageSchedule => {
+    // 移動対象タスクと同じページのタスクのみを対象にする
+    movingPageNames.forEach(pageName => {
+        const pageSchedule = scheduleData.pageSchedules[pageName];
+        if (!pageSchedule) return;
+        
         const pageTasks = pageSchedule.tasks;
         
-        // このページのタスクで移動対象のものがあるかチェック
-        const hasMovingTask = pageTasks.some(t => taskGroupIds.has(t.id));
-        
-        if (hasMovingTask) {
-            // 移動対象タスクより前にあるタスクを収集
-            pageTasks.forEach(task => {
-                if (!taskGroupIds.has(task.id) && task.week >= targetWeek && task.week < minWeek) {
-                    affectedTasks.push(task);
-                }
-            });
-        }
+        // 移動対象タスクより前にあって、移動先の位置に重なるタスクのみを収集
+        pageTasks.forEach(task => {
+            if (!taskGroupIds.has(task.id) && 
+                task.week >= targetWeek && 
+                task.week < minWeek) {
+                affectedTasks.push(task);
+            }
+        });
     });
     
-    // 押し出し量を計算（移動するタスクが占める週数）
+    // 押し出し量は移動量と同じ（1週移動なら1週押し出し）
     const pushAmount = Math.abs(weekDelta);
     
     // 事前に境界チェック：影響を受けるタスクが範囲外に出ないかチェック
@@ -814,7 +821,7 @@ function moveTaskGroupWithPush(taskGroup, weekDelta) {
         return;
     }
     
-    // 影響を受けるタスクを左に押し出す
+    // 影響を受けるタスクを押し出す（移動量分だけ）
     affectedTasks.forEach(task => {
         task.week -= pushAmount;
     });
