@@ -648,9 +648,14 @@ function findRelatedTasks(task) {
     return relatedTasks;
 }
 
-// タスクグループを移動
+// タスクグループを移動（押し出し機能付き）
 function moveTaskGroup(taskGroup, weekDelta) {
-    // 移動可能かチェック
+    // 左移動（weekDelta < 0）の場合、押し出し処理を行う
+    if (weekDelta < 0) {
+        return moveTaskGroupWithPush(taskGroup, weekDelta);
+    }
+    
+    // 右移動の場合は通常の移動処理
     const canMove = taskGroup.every(task => {
         const newWeek = task.week + weekDelta;
         return newWeek >= 0 && newWeek < scheduleData.totalWeeks;
@@ -676,6 +681,85 @@ function moveTaskGroup(taskGroup, weekDelta) {
     renderTasks();
     renderTimeline(); // タイムラインも更新して週次タスク数を反映
     drawTaskChart(); // グラフも更新
+    
+    // 統計を更新
+    updateStats();
+}
+
+// 押し出し機能付きのタスク移動
+function moveTaskGroupWithPush(taskGroup, weekDelta) {
+    // 移動するタスクの最小週を取得
+    const minWeek = Math.min(...taskGroup.map(t => t.week));
+    const targetWeek = minWeek + weekDelta;
+    
+    if (targetWeek < 0) {
+        alert('これ以上左に移動できません。');
+        return;
+    }
+    
+    // 影響を受ける可能性のあるタスクを収集
+    const affectedTasks = [];
+    const taskGroupIds = new Set(taskGroup.map(t => t.id));
+    
+    // 各ページについて、影響を受けるタスクを特定
+    Object.values(scheduleData.pageSchedules).forEach(pageSchedule => {
+        const pageTasks = pageSchedule.tasks;
+        let shouldPush = false;
+        
+        // このページのタスクで移動対象のものがあるかチェック
+        const hasMovingTask = pageTasks.some(t => taskGroupIds.has(t.id));
+        
+        if (hasMovingTask) {
+            // 移動対象タスクより前にあるタスクを収集
+            pageTasks.forEach(task => {
+                if (!taskGroupIds.has(task.id) && task.week >= targetWeek && task.week < minWeek) {
+                    shouldPush = true;
+                    affectedTasks.push(task);
+                }
+            });
+        }
+    });
+    
+    // 押し出し量を計算（移動するタスクが占める週数）
+    const pushAmount = Math.abs(weekDelta);
+    
+    // 影響を受けるタスクを左に押し出す
+    affectedTasks.forEach(task => {
+        task.week -= pushAmount;
+    });
+    
+    // 元のタスクグループを移動
+    taskGroup.forEach(task => {
+        task.week += weekDelta;
+    });
+    
+    // 全タスクが範囲内にあるか確認
+    const allTasksValid = scheduleData.tasks.every(task => 
+        task.week >= 0 && task.week < scheduleData.totalWeeks
+    );
+    
+    if (!allTasksValid) {
+        // 元に戻す
+        affectedTasks.forEach(task => {
+            task.week += pushAmount;
+        });
+        taskGroup.forEach(task => {
+            task.week -= weekDelta;
+        });
+        alert('タスクを押し出すとプロジェクト期間を超えてしまいます。');
+        return;
+    }
+    
+    // 週次タスク数を再計算
+    recalculateWeeklyTaskCounts();
+    
+    // 再描画
+    const rowsContainer = document.getElementById('ganttRows');
+    rowsContainer.innerHTML = '';
+    renderPages();
+    renderTasks();
+    renderTimeline();
+    drawTaskChart();
     
     // 統計を更新
     updateStats();
@@ -1067,9 +1151,10 @@ function importCSV(csvContent) {
             pageIndex: pageIndex,
             pageName: projectData.pages[pageIndex],
             phase: phase,
+            phaseType: owner === 'client' ? 'client-task' : type,
             text: taskText,
             week: week,
-            type: owner === 'client' ? 'client-task' : type,
+            type: isReview ? 'review' : (taskText.includes('修正版') ? 'revision' : 'submit'),
             owner: owner,
             isReview: isReview
         };
