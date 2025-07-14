@@ -341,10 +341,13 @@ function renderTimeline() {
     const timeline = document.getElementById('ganttTimeline');
     timeline.innerHTML = '';
     
-    // サイドバー分のスペースを追加
+    // サイドバー分のスペースを追加（sticky）
     const sidebarSpace = document.createElement('div');
     sidebarSpace.style.minWidth = '300px';
     sidebarSpace.style.background = '#667eea';
+    sidebarSpace.style.position = 'sticky';
+    sidebarSpace.style.left = '0';
+    sidebarSpace.style.zIndex = '15';
     timeline.appendChild(sidebarSpace);
     
     const taskLimit = parseInt(document.getElementById('taskLimit').value) || 15;
@@ -1207,8 +1210,8 @@ function onKeyDown(e) {
         });
         
         if (canMove) {
-            // キーボード移動でも押し出し機能を使用
-            moveTaskGroup(relatedTasks, weekDelta);
+            // キーボード移動では単純移動を使用（押し出し機能は使わない）
+            moveTaskGroupSimple(relatedTasks, weekDelta);
             
             // 選択を維持
             setTimeout(() => {
