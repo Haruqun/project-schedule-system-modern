@@ -746,8 +746,11 @@ function moveTaskGroupWithPush(taskGroup, weekDelta) {
         task.week += weekDelta;
     });
     
-    // スケジュール最適化：空いた週があれば後続タスクを前に詰める
-    optimizeScheduleAfterMove();
+    // スケジュール最適化：移動したタスクと同じページの後続タスクを前に詰める
+    const movedPageNames = [...new Set(taskGroup.map(t => t.pageName))];
+    movedPageNames.forEach(pageName => {
+        optimizePageSchedule(pageName);
+    });
     
     // 全タスクが範囲内にあるか確認
     const allTasksValid = scheduleData.tasks.every(task => 
@@ -781,8 +784,8 @@ function moveTaskGroupWithPush(taskGroup, weekDelta) {
     updateStats();
 }
 
-// スケジュール最適化：空いた週があれば後続タスクを前に詰める
-function optimizeScheduleAfterMove() {
+// 指定されたページのタスクのみを前に詰める
+function optimizePageSchedule(pageName) {
     const taskLimit = parseInt(document.getElementById('taskLimit').value) || 15;
     
     // 週ごとのタスク数を計算
@@ -793,28 +796,21 @@ function optimizeScheduleAfterMove() {
         }
     });
     
-    // ページごとにタスクをソート（開始週順）
-    Object.values(scheduleData.pageSchedules).forEach(pageSchedule => {
-        pageSchedule.tasks.sort((a, b) => a.week - b.week);
-    });
+    // 指定されたページのタスクのみを処理
+    const pageSchedule = scheduleData.pageSchedules[pageName];
+    if (!pageSchedule) return;
     
-    // 全タスクを週順にソート
-    const allTasks = [...scheduleData.tasks].sort((a, b) => a.week - b.week);
+    // そのページのタスクを週順にソート
+    const pageTasks = pageSchedule.tasks.filter(t => t.owner === 'ecbeing').sort((a, b) => a.week - b.week);
     
     // 各タスクについて、より早い週に移動できるかチェック
-    allTasks.forEach(task => {
-        if (task.owner !== 'ecbeing') return;
-        
+    pageTasks.forEach((task, index) => {
         const currentWeek = task.week;
         
-        // 同じページの前のタスクの最終週を取得
-        const pageTasks = scheduleData.pageSchedules[task.pageName].tasks;
-        const taskIndex = pageTasks.findIndex(t => t.id === task.id);
-        
+        // 前のタスクの最終週を取得
         let minAllowedWeek = 0;
-        if (taskIndex > 0) {
-            // 前のタスクの週の次週以降でないといけない
-            const prevTask = pageTasks[taskIndex - 1];
+        if (index > 0) {
+            const prevTask = pageTasks[index - 1];
             minAllowedWeek = prevTask.week + 1;
         }
         
