@@ -519,6 +519,70 @@
             flex: 1;
         }
         
+        .help-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            z-index: 1000;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .help-button:hover {
+            background: #764ba2;
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .help-button:active {
+            transform: scale(0.95);
+        }
+        
+        .help-tooltip {
+            position: absolute;
+            bottom: 60px;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            transform: translateY(5px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .help-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            right: 20px;
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid rgba(0, 0, 0, 0.9);
+        }
+        
+        .help-button:hover .help-tooltip {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
         .grid-line {
             position: absolute;
             top: 0;
@@ -687,6 +751,12 @@
     </div>
     
     <div class="tooltip" id="tooltip"></div>
+    
+    <!-- ヘルプボタン -->
+    <button class="help-button" onclick="showShortcutHelp()">
+        ?
+        <div class="help-tooltip">? キーでショートカット表示</div>
+    </button>
     
     <!-- モーダル -->
     <div class="modal-overlay" id="modalOverlay">
