@@ -356,10 +356,21 @@
             background: #95a5a6;
         }
         
+        .gantt-task.custom-task {
+            background: #9b59b6;
+            font-weight: 600;
+        }
+        
         .gantt-task.selected {
             outline: 3px solid #e74c3c;
             outline-offset: 2px;
             z-index: 5;
+        }
+        
+        .gantt-task.selection-preview {
+            outline: 2px dashed #667eea;
+            outline-offset: 1px;
+            opacity: 0.8;
         }
         
         .task-group {
@@ -647,13 +658,8 @@
         }
         
         .accordion-content {
-            max-height: 0;
+            display: none;
             overflow: hidden;
-            transition: max-height 0.3s ease-out;
-        }
-        
-        .accordion-content.active {
-            max-height: 800px;
         }
         
         .accordion-body {
@@ -1035,6 +1041,52 @@
                                 <!-- 動的に追加されたアイテムがここに表示されます -->
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 単品タスク追加 -->
+            <div class="accordion-section" style="margin-bottom: 30px;">
+                <div class="accordion-header" onclick="toggleAccordion('customTaskAccordion')">
+                    <h3>➕ 単品タスク追加</h3>
+                    <span class="accordion-icon" id="customTaskAccordion-icon">▼</span>
+                </div>
+                <div class="accordion-content" id="customTaskAccordion" style="display: none;">
+                    <div class="form-section">
+                        <div class="form-group">
+                            <label for="customTaskName">タスク名:</label>
+                            <input type="text" id="customTaskName" placeholder="例: 追加コンテンツ作成" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div class="form-group">
+                            <label for="customTaskPosition">挿入位置:</label>
+                            <select id="customTaskPosition" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <!-- ページの選択肢は動的に生成 -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="customTaskWeek">配置する週:</label>
+                            <select id="customTaskWeek" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <!-- 週の選択肢は動的に生成 -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="customTaskType">タスクタイプ:</label>
+                            <select id="customTaskType" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="custom-task">カスタムタスク（紫）</option>
+                                <option value="pc-design">PCデザイン（青）</option>
+                                <option value="sp-design">SPデザイン（赤）</option>
+                                <option value="coding">コーディング（緑）</option>
+                                <option value="client-task">クライアント確認（グレー）</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="customTaskOwner">担当:</label>
+                            <select id="customTaskOwner" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="ecbeing">ecbeing</option>
+                                <option value="client">クライアント</option>
+                            </select>
+                        </div>
+                        <button onclick="addCustomTask()" style="width: 100%; padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">タスクを追加</button>
                     </div>
                 </div>
             </div>

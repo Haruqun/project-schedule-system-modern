@@ -67,6 +67,16 @@ let dragState = {
     offsetX: 0
 };
 
+// 矩形選択状態
+let selectionState = {
+    isSelecting: false,
+    startX: 0,
+    startY: 0,
+    endX: 0,
+    endY: 0,
+    selectionBox: null
+};
+
 // 選択されたタスク
 let selectedTask = null;
 let selectedTasks = []; // 複数選択用
@@ -76,6 +86,21 @@ let selectedTaskId = null;
 // アンドゥ機能用の履歴
 let undoHistory = [];
 let maxUndoSteps = 50;
+
+// アンドゥ用の状態を保存
+function saveUndoState() {
+    const state = {
+        tasks: JSON.parse(JSON.stringify(scheduleData.tasks)),
+        pageSchedules: JSON.parse(JSON.stringify(scheduleData.pageSchedules))
+    };
+    
+    undoHistory.push(state);
+    
+    // 履歴の上限を超えたら古いものを削除
+    if (undoHistory.length > maxUndoSteps) {
+        undoHistory.shift();
+    }
+}
 
 
 // 初期化
@@ -334,6 +359,11 @@ function renderGanttChart() {
     renderTasks();
     addTodayLine();
     drawTaskChart();
+    
+    // カスタムタスクフォームを遅延初期化
+    setTimeout(() => {
+        initializeCustomTaskForm();
+    }, 100);
 }
 
 // タイムライン描画
@@ -668,7 +698,19 @@ function onTaskMouseUp(e) {
 
 // 関連タスクを見つける（選択タスクの右側全て）
 function findRelatedTasks(task, direction) {
-    const pageTasks = scheduleData.pageSchedules[task.pageName].tasks;
+    let pageTasks = [];
+    
+    // カスタムタスクの場合は、scheduleData.tasksから同じpageIndexのタスクを取得
+    if (task.isCustom || !task.pageName) {
+        pageTasks = scheduleData.tasks.filter(t => t.pageIndex === task.pageIndex);
+    } else {
+        // 通常のタスクの場合は従来通り
+        const pageSchedule = scheduleData.pageSchedules[task.pageName];
+        if (pageSchedule) {
+            pageTasks = pageSchedule.tasks;
+        }
+    }
+    
     const relatedTasks = [];
     
     // 左移動の場合：選択タスクとその右側のタスク
@@ -1039,6 +1081,9 @@ function setupEventListeners() {
     
     // キーボードイベント
     document.addEventListener('keydown', onKeyDown);
+    
+    // 矩形選択のイベントリスナーを追加
+    setupRectangleSelection();
 }
 
 // スケジュールリセット
@@ -1286,8 +1331,20 @@ function onKeyDown(e) {
         });
         
         if (canMove) {
-            // シンプルな移動処理
-            moveTaskGroup(tasksToMove, weekDelta);
+            // シンプルな移動処理（カスタムタスクにも対応）
+            saveStateForUndo();
+            tasksToMove.forEach(task => {
+                task.week += weekDelta;
+            });
+            
+            // 再描画
+            recalculateWeeklyTaskCounts();
+            const rowsContainer = document.getElementById('ganttRows');
+            rowsContainer.innerHTML = '';
+            renderPages();
+            renderTasks();
+            renderTimeline();
+            drawTaskChart();
         }
         
         // 選択を維持（移動したタスクを再選択）
@@ -1880,6 +1937,141 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// 矩形選択機能を設定
+function setupRectangleSelection() {
+    const ganttRows = document.getElementById('ganttRows');
+    
+    // 選択ボックス要素を作成
+    selectionState.selectionBox = document.createElement('div');
+    selectionState.selectionBox.style.cssText = `
+        position: absolute;
+        border: 2px dashed #667eea;
+        background: rgba(102, 126, 234, 0.1);
+        pointer-events: none;
+        display: none;
+        z-index: 50;
+    `;
+    document.body.appendChild(selectionState.selectionBox);
+    
+    // マウスダウンイベント
+    ganttRows.addEventListener('mousedown', (e) => {
+        // タスク上でのクリックは通常の選択処理
+        if (e.target.closest('.gantt-task')) {
+            return;
+        }
+        
+        // Shift/Ctrl/Cmdキーが押されている場合はスキップ
+        if (e.shiftKey || e.ctrlKey || e.metaKey) {
+            return;
+        }
+        
+        // 矩形選択開始
+        selectionState.isSelecting = true;
+        selectionState.startX = e.pageX;
+        selectionState.startY = e.pageY;
+        selectionState.endX = e.pageX;
+        selectionState.endY = e.pageY;
+        
+        updateSelectionBox();
+        selectionState.selectionBox.style.display = 'block';
+        
+        e.preventDefault();
+    });
+    
+    // マウス移動イベント
+    document.addEventListener('mousemove', (e) => {
+        if (!selectionState.isSelecting) return;
+        
+        selectionState.endX = e.pageX;
+        selectionState.endY = e.pageY;
+        
+        updateSelectionBox();
+        highlightTasksInSelection();
+    });
+    
+    // マウスアップイベント
+    document.addEventListener('mouseup', (e) => {
+        if (!selectionState.isSelecting) return;
+        
+        // 選択完了
+        selectTasksInSelection();
+        
+        // リセット
+        selectionState.isSelecting = false;
+        selectionState.selectionBox.style.display = 'none';
+    });
+}
+
+// 選択ボックスの位置とサイズを更新
+function updateSelectionBox() {
+    const box = selectionState.selectionBox;
+    const minX = Math.min(selectionState.startX, selectionState.endX);
+    const minY = Math.min(selectionState.startY, selectionState.endY);
+    const width = Math.abs(selectionState.endX - selectionState.startX);
+    const height = Math.abs(selectionState.endY - selectionState.startY);
+    
+    box.style.left = minX + 'px';
+    box.style.top = minY + 'px';
+    box.style.width = width + 'px';
+    box.style.height = height + 'px';
+}
+
+// 選択ボックス内のタスクをハイライト
+function highlightTasksInSelection() {
+    const tasks = document.querySelectorAll('.gantt-task');
+    const selectionRect = {
+        left: Math.min(selectionState.startX, selectionState.endX),
+        top: Math.min(selectionState.startY, selectionState.endY),
+        right: Math.max(selectionState.startX, selectionState.endX),
+        bottom: Math.max(selectionState.startY, selectionState.endY)
+    };
+    
+    tasks.forEach(task => {
+        const rect = task.getBoundingClientRect();
+        const taskRect = {
+            left: rect.left + window.scrollX,
+            top: rect.top + window.scrollY,
+            right: rect.right + window.scrollX,
+            bottom: rect.bottom + window.scrollY
+        };
+        
+        // タスクが選択ボックス内にあるかチェック
+        if (taskRect.right > selectionRect.left &&
+            taskRect.left < selectionRect.right &&
+            taskRect.bottom > selectionRect.top &&
+            taskRect.top < selectionRect.bottom) {
+            task.classList.add('selection-preview');
+        } else {
+            task.classList.remove('selection-preview');
+        }
+    });
+}
+
+// 選択ボックス内のタスクを選択
+function selectTasksInSelection() {
+    clearSelection();
+    selectedTasks = [];
+    
+    const tasks = document.querySelectorAll('.gantt-task.selection-preview');
+    tasks.forEach(taskElement => {
+        taskElement.classList.remove('selection-preview');
+        taskElement.classList.add('selected');
+        
+        const taskId = taskElement.dataset.taskId;
+        const task = scheduleData.tasks.find(t => t.id === taskId);
+        if (task) {
+            selectedTasks.push(task);
+        }
+    });
+    
+    // 選択されたタスクがある場合は最初のタスクをアクティブに
+    if (selectedTasks.length > 0) {
+        selectedTask = selectedTasks[0];
+        selectedTaskId = selectedTask.id;
+        lastSelectedTask = selectedTask;
+    }
+}
+
 // ドロワー制御関数
 function toggleDrawer() {
     const drawer = document.getElementById('drawer');
@@ -1890,6 +2082,11 @@ function toggleDrawer() {
     } else {
         drawer.classList.add('active');
         ganttContainer.classList.add('drawer-open');
+        
+        // ドロワーが開いたときにカスタムタスクフォームを初期化
+        setTimeout(() => {
+            initializeCustomTaskForm();
+        }, 100);
     }
 }
 
@@ -1904,14 +2101,14 @@ function closeDrawer() {
 // アコーディオン機能
 function toggleAccordion(id) {
     const content = document.getElementById(id);
-    const header = content.previousElementSibling;
+    const icon = document.getElementById(id + '-icon');
     
-    if (content.classList.contains('active')) {
-        content.classList.remove('active');
-        header.classList.remove('active');
+    if (content.style.display === 'none' || content.style.display === '') {
+        content.style.display = 'block';
+        if (icon) icon.textContent = '▲';
     } else {
-        content.classList.add('active');
-        header.classList.add('active');
+        content.style.display = 'none';
+        if (icon) icon.textContent = '▼';
     }
 }
 
@@ -2165,4 +2362,119 @@ function removeItem(button, type, id) {
             }
         }
     }
+}
+
+// カスタムタスクを追加する関数
+function addCustomTask() {
+    const taskName = document.getElementById('customTaskName').value.trim();
+    const positionSelect = document.getElementById('customTaskPosition');
+    const weekSelect = document.getElementById('customTaskWeek');
+    const taskType = document.getElementById('customTaskType').value;
+    const taskOwner = document.getElementById('customTaskOwner').value;
+    
+    if (!taskName) {
+        alert('タスク名を入力してください');
+        return;
+    }
+    
+    const insertAfterIndex = parseInt(positionSelect.value);
+    const week = parseInt(weekSelect.value);
+    
+    if (isNaN(insertAfterIndex) || isNaN(week)) {
+        alert('挿入位置と週を選択してください');
+        return;
+    }
+    
+    // 履歴を保存
+    saveUndoState();
+    
+    // 新しいページをprojectData.pagesに挿入
+    const newPageName = taskName;
+    projectData.pages.splice(insertAfterIndex + 1, 0, newPageName);
+    
+    // 既存のタスクのpageIndexを更新（挿入位置より後のページ）
+    scheduleData.tasks.forEach(task => {
+        if (task.pageIndex > insertAfterIndex) {
+            task.pageIndex += 1;
+        }
+    });
+    
+    // 新しいタスクを作成（カスタムページの場合は1つのタスクのみ）
+    const newTask = {
+        id: `custom_${Date.now()}`,
+        text: taskName,
+        week: week,
+        pageIndex: insertAfterIndex + 1,
+        type: taskType,
+        owner: taskOwner,
+        isCustom: true
+    };
+    
+    // タスクを追加
+    scheduleData.tasks.push(newTask);
+    
+    // 週ごとのタスク数を再計算
+    recalculateWeeklyTaskCounts();
+    
+    // 再描画
+    const rowsContainer = document.getElementById('ganttRows');
+    rowsContainer.innerHTML = '';
+    renderPages();
+    renderTasks();
+    renderTimeline();
+    drawTaskChart();
+    updateStats();
+    
+    // フォームを初期化し直す
+    initializeCustomTaskForm();
+    
+    // フォームをクリア
+    document.getElementById('customTaskName').value = '';
+    
+    // 成功メッセージ
+    alert(`「${taskName}」を${projectData.pages[insertAfterIndex]}の下に挿入しました`);
+}
+
+// カスタムタスクフォームのドロップダウンを初期化
+function initializeCustomTaskForm() {
+    const weekSelect = document.getElementById('customTaskWeek');
+    const positionSelect = document.getElementById('customTaskPosition');
+    
+    // 要素が存在しない場合は早期リターン
+    if (!weekSelect || !positionSelect) {
+        return;
+    }
+    
+    // 週の選択肢を設定
+    weekSelect.innerHTML = '';
+    for (let i = 1; i <= scheduleData.totalWeeks; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `第${i}週`;
+        weekSelect.appendChild(option);
+    }
+    
+    // 挿入位置を更新
+    updateInsertPositions();
+}
+
+// 挿入位置のドロップダウンを更新
+function updateInsertPositions() {
+    const positionSelect = document.getElementById('customTaskPosition');
+    
+    // 要素が存在しない場合は早期リターン
+    if (!positionSelect) {
+        return;
+    }
+    
+    // 挿入位置の選択肢をクリア
+    positionSelect.innerHTML = '';
+    
+    // 各ページの下に挿入するオプションを追加
+    projectData.pages.forEach((page, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `「${page}」の下に挿入`;
+        positionSelect.appendChild(option);
+    });
 }
