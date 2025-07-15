@@ -1,0 +1,115 @@
+{
+  "taskTemplates": [
+    {
+      "id": "wireframe",
+      "name": "ワイヤーフレーム作成",
+      "requiredSkill": "director",
+      "estimatedHours": 4,
+      "priority": "high",
+      "isClientTask": false,
+      "description": "ページの構成とレイアウトを定義"
+    },
+    {
+      "id": "design",
+      "name": "デザイン作成",
+      "requiredSkill": "designer",
+      "estimatedHours": 8,
+      "priority": "high",
+      "isClientTask": false,
+      "dependsOn": ["wireframe"],
+      "description": "ビジュアルデザインの作成"
+    },
+    {
+      "id": "client_review",
+      "name": "クライアント確認",
+      "requiredSkill": "director",
+      "estimatedHours": 2,
+      "priority": "high",
+      "isClientTask": true,
+      "dependsOn": ["design"],
+      "description": "クライアントによるデザインレビュー"
+    },
+    {
+      "id": "design_fix",
+      "name": "デザイン修正",
+      "requiredSkill": "designer",
+      "estimatedHours": 4,
+      "priority": "high",
+      "isClientTask": false,
+      "dependsOn": ["client_review"],
+      "description": "フィードバックに基づく修正"
+    },
+    {
+      "id": "coding",
+      "name": "コーディング",
+      "requiredSkill": "engineer",
+      "estimatedHours": 12,
+      "priority": "medium",
+      "isClientTask": false,
+      "dependsOn": ["design_fix"],
+      "description": "HTMLコーディングとシステム実装"
+    },
+    {
+      "id": "testing",
+      "name": "動作確認・テスト",
+      "requiredSkill": "engineer",
+      "estimatedHours": 3,
+      "priority": "medium",
+      "isClientTask": false,
+      "dependsOn": ["coding"],
+      "description": "機能テストとブラウザ確認"
+    },
+    {
+      "id": "final_check",
+      "name": "最終確認",
+      "requiredSkill": "director",
+      "estimatedHours": 2,
+      "priority": "medium",
+      "isClientTask": true,
+      "dependsOn": ["testing"],
+      "description": "納品前の最終チェック"
+    }
+  ],
+  "workflowSettings": {
+    "autoAssignTasks": true,
+    "prioritizeClientTasks": true,
+    "maxParallelTasksPerWorker": 3,
+    "taskCompletionBuffer": 0.1,
+    "skillMatchingThreshold": 0.5
+  },
+  "taskDependencies": {
+    "wireframe": [],
+    "design": ["wireframe"],
+    "client_review": ["design"],
+    "design_fix": ["client_review"],
+    "coding": ["design_fix"],
+    "testing": ["coding"],
+    "final_check": ["testing"]
+  },
+  "taskCategories": [
+    {
+      "id": "planning",
+      "name": "企画・設計",
+      "color": "#8e44ad",
+      "tasks": ["wireframe"]
+    },
+    {
+      "id": "design",
+      "name": "デザイン",
+      "color": "#3498db",
+      "tasks": ["design", "design_fix"]
+    },
+    {
+      "id": "development",
+      "name": "開発",
+      "color": "#27ae60",
+      "tasks": ["coding", "testing"]
+    },
+    {
+      "id": "review",
+      "name": "レビュー",
+      "color": "#e67e22",
+      "tasks": ["client_review", "final_check"]
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "recurringMeetings": [
+    {
+      "id": "daily_standup",
+      "name": "朝会",
+      "type": "daily",
+      "time": "09:00",
+      "duration": 0.25,
+      "participants": "all",
+      "description": "1日の作業内容の確認と共有",
+      "enabled": true,
+      "daysOfWeek": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "weekly_progress",
+      "name": "週次進捗会議",
+      "type": "weekly",
+      "dayOfWeek": 1,
+      "time": "14:00",
+      "duration": 1,
+      "participants": "all",
+      "description": "週の進捗確認と課題共有",
+      "enabled": true
+    },
+    {
+      "id": "weekly_planning",
+      "name": "週次計画会議",
+      "type": "weekly",
+      "dayOfWeek": 5,
+      "time": "16:00",
+      "duration": 1,
+      "participants": ["director", "designer", "engineer"],
+      "description": "翌週の作業計画と調整",
+      "enabled": true
+    },
+    {
+      "id": "design_review",
+      "name": "デザインレビュー",
+      "type": "weekly",
+      "dayOfWeek": 3,
+      "time": "13:00",
+      "duration": 1.5,
+      "participants": ["director", "designer"],
+      "description": "デザイン成果物のレビューと改善",
+      "enabled": true
+    },
+    {
+      "id": "tech_meeting",
+      "name": "技術ミーティング",
+      "type": "weekly",
+      "dayOfWeek": 4,
+      "time": "15:00",
+      "duration": 1,
+      "participants": ["engineer"],
+      "description": "技術的な課題の共有と解決策の検討",
+      "enabled": true
+    },
+    {
+      "id": "client_meeting",
+      "name": "クライアント定例",
+      "type": "weekly",
+      "dayOfWeek": 2,
+      "time": "10:00",
+      "duration": 2,
+      "participants": ["director"],
+      "description": "クライアントとの進捗報告と確認",
+      "enabled": true,
+      "isExternal": true
+    },
+    {
+      "id": "monthly_review",
+      "name": "月次振り返り",
+      "type": "monthly",
+      "dayOfMonth": 25,
+      "time": "15:00",
+      "duration": 2,
+      "participants": "all",
+      "description": "月の振り返りと改善点の洗い出し",
+      "enabled": true
+    }
+  ],
+  "meetingSettings": {
+    "autoSchedule": true,
+    "avoidOvertime": true,
+    "bufferTime": 10,
+    "maxMeetingsPerDay": 3,
+    "preferredMeetingHours": {
+      "start": "09:00",
+      "end": "17:00"
+    }
+  },
+  "meetingRooms": [
+    {
+      "id": "main_room",
+      "name": "メイン会議室",
+      "capacity": 10,
+      "equipment": ["projector", "whiteboard", "video_conference"]
+    },
+    {
+      "id": "small_room_1",
+      "name": "小会議室1",
+      "capacity": 4,
+      "equipment": ["monitor", "whiteboard"]
+    },
+    {
+      "id": "small_room_2",
+      "name": "小会議室2",
+      "capacity": 4,
+      "equipment": ["monitor", "whiteboard"]
+    }
+  ]
+}

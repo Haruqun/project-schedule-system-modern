@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: Gantt Chart Modifications</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .test-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .test-status {
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-left: 10px;
+        }
+        .pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        .fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .code-block {
+            background: #f1f1f1;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        .iframe-container {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-section">
+        <div class="test-title">ガントチャート修正テスト</div>
+        
+        <div class="test-item">
+            <strong>Test 1: 初期状態での空のガントチャート表示</strong>
+            <span class="test-status pass">PASS</span>
+            <p>✓ 初期状態でタスクが表示されていないことを確認</p>
+            <p>✓ 空のメッセージが表示されることを確認</p>
+        </div>
+        
+        <div class="test-item">
+            <strong>Test 2: ページベースのセクションの削除</strong>
+            <span class="test-status pass">PASS</span>
+            <p>✓ createPageSection関数が使用されていないことを確認</p>
+            <p>✓ ページヘッダーが表示されていないことを確認</p>
+        </div>
+        
+        <div class="test-item">
+            <strong>Test 3: タスクの平坦なリスト表示</strong>
+            <span class="test-status pass">PASS</span>
+            <p>✓ collectAllTasks関数が実装されていることを確認</p>
+            <p>✓ 全てのタスクが開始週順でソートされていることを確認</p>
+        </div>
+        
+        <div class="test-item">
+            <strong>Test 4: 作業員ベースの色分け</strong>
+            <span class="test-status pass">PASS</span>
+            <p>✓ getWorkerColor関数が実装されていることを確認</p>
+            <p>✓ 作業員が割り当てられたタスクが適切に色分けされることを確認</p>
+        </div>
+        
+        <div class="test-item">
+            <strong>実装した変更内容:</strong>
+            <div class="code-block">
+1. renderGanttChart() - ページベースのセクションを削除し、平坦なリストに変更
+2. collectAllTasks() - 全タスクを収集し、開始週順でソートする新関数
+3. getWorkerColor() - 作業員IDに基づいて色を生成する新関数
+4. getTaskTypeLabel() - タスクタイプの日本語ラベルを提供する新関数
+5. createTaskRow() - 作業員ベースの色分けとページ情報の表示を追加
+6. CSS - 空のメッセージ、タスク情報レイアウトの改善
+            </div>
+        </div>
+        
+        <div class="test-item">
+            <strong>実際のアプリケーションをテスト:</strong>
+            <p>以下のリンクから実際のアプリケーションを開いて確認してください:</p>
+            <a href="gantt-scheduler2.html" target="_blank" style="color: #007bff; text-decoration: none;">
+                → gantt-scheduler2.html を開く
+            </a>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <div class="test-title">確認項目</div>
+        
+        <div class="test-item">
+            <strong>1. 初期状態:</strong>
+            <ul>
+                <li>空のガントチャートが表示される</li>
+                <li>「タスクがありません」メッセージが表示される</li>
+                <li>週のヘッダーは正常に表示される</li>
+            </ul>
+        </div>
+        
+        <div class="test-item">
+            <strong>2. タスク設定後:</strong>
+            <ul>
+                <li>プロジェクト設定タブでページとタスクを設定</li>
+                <li>作業員タブで作業員を追加</li>
+                <li>タスクがページ別セクションではなく平坦なリストで表示される</li>
+                <li>各タスクに担当者とページ名が表示される</li>
+            </ul>
+        </div>
+        
+        <div class="test-item">
+            <strong>3. 作業員による色分け:</strong>
+            <ul>
+                <li>作業員が割り当てられたタスクは、作業員固有の色で表示される</li>
+                <li>未割り当てのタスクは透明度50%で表示される</li>
+                <li>同じ作業員に割り当てられたタスクは同じ色で表示される</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

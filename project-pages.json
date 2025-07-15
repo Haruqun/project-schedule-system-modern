@@ -1,0 +1,96 @@
+{
+  "pages": [
+    "ジャンルページ（一覧・詳細）",
+    "カテゴリページ（一覧・詳細）",
+    "選び方ページ - 縦走用アックスの選び方",
+    "選び方ページ -登山用軽量ハーネスの活用",
+    "選び方ページ -アルトテント/テロステント",
+    "新着商品",
+    "キャンペーン",
+    "限定アイテム",
+    "Tech Info TOP",
+    "Tech Info 一覧",
+    "Tech Info詳細",
+    "Tech Info 製品別 一覧",
+    "Tech Info 製品別 詳細",
+    "商品詳細",
+    "マイページ",
+    "ご利用にあたって",
+    "ご利用ガイド一覧",
+    "ご利用ガイド詳細",
+    "コーポレートTOP",
+    "会社情報",
+    "会社情報詳細",
+    "取扱店",
+    "取扱店一覧",
+    "サポート情報",
+    "取扱説明書一覧 (PDF)",
+    "お問い合わせ",
+    "ニュース",
+    "重要なお知らせ",
+    "ブランドTOPページ",
+    "Black Diamondページ",
+    "製品一覧",
+    "ヒストリー",
+    "Ospreyページ",
+    "Scarpaページ",
+    "Smartwoolページ"
+  ],
+  "taskTemplates": [
+    {
+      "name": "ワイヤーフレーム作成",
+      "requiredSkill": "director",
+      "estimatedHours": 4,
+      "priority": "high",
+      "isClientTask": false
+    },
+    {
+      "name": "デザイン作成",
+      "requiredSkill": "designer",
+      "estimatedHours": 8,
+      "priority": "high",
+      "isClientTask": false,
+      "dependsOn": "ワイヤーフレーム作成"
+    },
+    {
+      "name": "クライアント確認",
+      "requiredSkill": "director",
+      "estimatedHours": 2,
+      "priority": "high",
+      "isClientTask": true,
+      "dependsOn": "デザイン作成"
+    },
+    {
+      "name": "デザイン修正",
+      "requiredSkill": "designer",
+      "estimatedHours": 4,
+      "priority": "high",
+      "isClientTask": false,
+      "dependsOn": "クライアント確認"
+    },
+    {
+      "name": "コーディング",
+      "requiredSkill": "engineer",
+      "estimatedHours": 12,
+      "priority": "medium",
+      "isClientTask": false,
+      "dependsOn": "デザイン修正"
+    },
+    {
+      "name": "動作確認・テスト",
+      "requiredSkill": "engineer",
+      "estimatedHours": 3,
+      "priority": "medium",
+      "isClientTask": false,
+      "dependsOn": "コーディング"
+    },
+    {
+      "name": "最終確認",
+      "requiredSkill": "director",
+      "estimatedHours": 2,
+      "priority": "medium",
+      "isClientTask": true,
+      "dependsOn": "動作確認・テスト"
+    }
+  ]
+}
