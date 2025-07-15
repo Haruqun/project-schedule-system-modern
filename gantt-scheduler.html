@@ -300,18 +300,58 @@
             cursor: grabbing;
         }
         
+        /* PCデザイン */
         .gantt-task.pc-design {
             background: #3498db;
         }
         
+        .gantt-task.pc-design.submit {
+            background: #3498db; /* 通常の青 */
+        }
+        
+        .gantt-task.pc-design.review {
+            background: #5dade2; /* 薄い青 */
+        }
+        
+        .gantt-task.pc-design.revision {
+            background: #2874a6; /* 濃い青 */
+        }
+        
+        /* SPデザイン */
         .gantt-task.sp-design {
             background: #e74c3c;
         }
         
+        .gantt-task.sp-design.submit {
+            background: #e74c3c; /* 通常の赤 */
+        }
+        
+        .gantt-task.sp-design.review {
+            background: #ec7063; /* 薄い赤 */
+        }
+        
+        .gantt-task.sp-design.revision {
+            background: #c0392b; /* 濃い赤 */
+        }
+        
+        /* コーディング */
         .gantt-task.coding {
             background: #2ecc71;
         }
         
+        .gantt-task.coding.submit {
+            background: #2ecc71; /* 通常の緑 */
+        }
+        
+        .gantt-task.coding.review {
+            background: #58d68d; /* 薄い緑 */
+        }
+        
+        .gantt-task.coding.revision {
+            background: #27ae60; /* 濃い緑 */
+        }
+        
+        /* クライアント確認 */
         .gantt-task.client-task {
             background: #95a5a6;
         }
@@ -800,24 +840,6 @@
         }
         
         /* ドロワーメニュー */
-        .drawer-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 400px; /* ドロワー幅分だけ除外 */
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.2);
-            z-index: 998;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-            pointer-events: none; /* テーブル操作を妨げない */
-        }
-        
-        .drawer-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
         
         .drawer {
             position: fixed;
@@ -935,8 +957,6 @@
         
     </div>
     
-    <!-- ドロワーオーバーレイ -->
-    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
     
     <!-- ドロワーメニュー -->
     <div class="drawer" id="drawer">
