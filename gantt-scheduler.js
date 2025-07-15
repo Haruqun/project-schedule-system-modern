@@ -528,7 +528,7 @@ function renderTasks() {
         let left;
         let width;
         
-        if (task.isReview) {
+        if (task.isReview || task.type === 'review') {
             // 修正依頼タスクは週の間の列に配置
             // 週の位置 + 週の幅 + 前の修正依頼列の幅の合計
             left = (task.week * cellWidth) + cellWidth + (task.week * reviewCellWidth) + 5;
@@ -1447,18 +1447,31 @@ function importCSV(csvContent) {
         if (phase.includes('SP')) type = 'sp-design';
         else if (phase.includes('コーディング')) type = 'coding';
         
-        const isReview = taskText.includes('修正依頼') || taskText.includes('確認');
+        // タスクタイプを判定
+        let taskType = 'submit';
+        let isReview = false;
+        
+        if (taskText.includes('修正依頼')) {
+            taskType = 'review';
+            isReview = true;
+        } else if (taskText.includes('修正版')) {
+            taskType = 'revision';
+            isReview = false;
+        } else if (taskText.includes('提出') && !taskText.includes('修正')) {
+            taskType = 'submit';
+            isReview = false;
+        }
         
         // タスクを作成
         const task = {
-            id: `page${pageIndex}_${type}_week${week}${isReview ? '_review' : ''}`,
+            id: `page${pageIndex}_${type}_week${week}_${taskType}`,
             pageIndex: pageIndex,
             pageName: projectData.pages[pageIndex],
             phase: phase,
             phaseType: owner === 'client' ? 'client-task' : type,
-            text: taskText,
+            text: taskText,  // 元のテキストをそのまま使用
             week: week,
-            type: isReview ? 'review' : (taskText.includes('修正版') ? 'revision' : 'submit'),
+            type: taskType,
             owner: owner,
             isReview: isReview
         };
@@ -1484,8 +1497,8 @@ function importCSV(csvContent) {
     });
     
     // スケジュールデータを更新
-    scheduleData.tasks = newTasks;
     scheduleData.totalWeeks = maxWeek + 3; // 余裕を持たせる
+    scheduleData.tasks = newTasks;
     
     // ページスケジュールを再構築
     scheduleData.pageSchedules = {};
@@ -1504,12 +1517,7 @@ function importCSV(csvContent) {
     });
     
     // 週次タスク数を再計算
-    scheduleData.weeklyTaskCounts = new Array(scheduleData.totalWeeks).fill(0);
-    newTasks.forEach(task => {
-        if (task.owner === 'ecbeing' && task.week < scheduleData.totalWeeks) {
-            scheduleData.weeklyTaskCounts[task.week]++;
-        }
-    });
+    recalculateWeeklyTaskCounts();
     
     // ガントチャートを再描画
     renderGanttChart();
@@ -1517,9 +1525,6 @@ function importCSV(csvContent) {
     // ページリストとタスクリストのフォームを更新
     updatePageListForm();
     updateTaskListForm();
-    
-    // タスクページオプションも更新
-    updateTaskPageOptions();
     
     alert(`${newTasks.length}個のタスクをインポートしました`);
 }
@@ -2477,4 +2482,25 @@ function updateInsertPositions() {
         option.textContent = `「${page}」の下に挿入`;
         positionSelect.appendChild(option);
     });
+}
+
+// ページリストフォームを更新
+function updatePageListForm() {
+    const pageTextArea = document.getElementById('pageTextArea');
+    if (pageTextArea) {
+        pageTextArea.value = projectData.pages.join('\n');
+    }
+}
+
+// タスクリストフォームを更新
+function updateTaskListForm() {
+    const taskTextArea = document.getElementById('taskTextArea');
+    if (taskTextArea) {
+        const defaultTasks = [
+            'PCデザイン(3週間)',
+            'SPデザイン(3週間)',
+            'コーディング(3週間)'
+        ];
+        taskTextArea.value = defaultTasks.join('\n');
+    }
 }
