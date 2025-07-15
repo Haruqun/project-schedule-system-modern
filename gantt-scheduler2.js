@@ -64,6 +64,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // サンプル作業員を常に追加（色付けのため）
     addSampleWorkers();
     
+    // デフォルトの定例ミーティングを追加
+    addDefaultMeetings();
+    
+    // タスクを作業員に割り当て
+    assignTasksToWorkers();
+    
     // データがない場合はサンプルデータを設定 (コメントアウト - 空のチャートを表示)
     // if (projectData.pages.length === 0) {
     //     loadSampleData();
@@ -72,28 +78,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // サンプル作業員を追加
 function addSampleWorkers() {
-    // 既に作業員がいる場合は追加しない
-    if (projectData.workers.length > 0) {
-        return;
-    }
+    // 作業員をリセットして3人に固定
+    projectData.workers = [];
     
-    // サンプル作業員（事前に色を割り当て）
+    // サンプル作業員（ディレクター、デザイナー、コーダー）
     const sampleWorkers = [
         { 
-            name: '山田太郎', 
-            skills: { director: 0.9, designer: 0.3, coder: 0.1 }, 
+            name: '山田太郎（ディレクター）', 
+            skills: { director: 1.0, designer: 0.5, coder: 0.3 }, 
             capacity: 40,
             color: '#3498db' // 青
         },
         { 
-            name: '佐藤花子', 
-            skills: { director: 0.1, designer: 0.8, coder: 0.7 }, 
+            name: '佐藤花子（デザイナー）', 
+            skills: { director: 0.5, designer: 1.0, coder: 0.4 }, 
             capacity: 40,
             color: '#e74c3c' // 赤
         },
         { 
-            name: '鈴木一郎', 
-            skills: { director: 0.1, designer: 0.7, coder: 0.8 }, 
+            name: '鈴木一郎（コーダー）', 
+            skills: { director: 0.4, designer: 0.5, coder: 1.0 }, 
             capacity: 40,
             color: '#2ecc71' // 緑
         }
@@ -107,12 +111,38 @@ function addSampleWorkers() {
             capacity: w.capacity,
             color: w.color,
             currentLoad: 0,
-            assignedTasks: []
+            assignedTasks: [],
+            taskQueue: [],
+            currentTask: null,
+            totalWorkedHours: 0
         });
     });
     
     // UIを更新
     updateWorkerList();
+}
+
+// デフォルトの定例ミーティングを追加
+function addDefaultMeetings() {
+    // 既にミーティングがある場合は追加しない
+    if (projectData.meetings.length > 0) {
+        return;
+    }
+    
+    // 週次定例ミーティング（2025/07/16から毎週）
+    const defaultMeeting = {
+        id: 'meeting-weekly-001',
+        name: '週次進捗会議',
+        startDate: '2025-07-16',
+        repeatType: 'weekly',
+        duration: 1, // 1時間
+        type: 'meeting',
+        participants: ['全員'],
+        simulationStatus: 'waiting',
+        progress: 0
+    };
+    
+    projectData.meetings.push(defaultMeeting);
 }
 
 // タブ切り替え
@@ -152,11 +182,19 @@ function applySettings() {
     projectData.pages = pageListText.split('\n')
         .map(line => line.trim())
         .filter(line => line.length > 0)
-        .map((name, index) => ({
-            id: `page-${index}`,
-            name: name,
-            tasks: []
-        }));
+        .map((name, index) => {
+            // ページ名からコードを抽出
+            const match = name.match(/^(.+?)\((.+?)\)$/);
+            const pageName = match ? match[1].trim() : name;
+            const pageCode = match ? match[2].trim() : `page_${index}`;
+            
+            return {
+                id: `P${String(index + 1).padStart(3, '0')}`, // P001, P002, P003...
+                name: pageName,
+                code: pageCode,
+                tasks: []
+            };
+        });
     
     // タスクテンプレートの解析
     const taskTemplateText = document.getElementById('taskTemplate').value;
@@ -175,6 +213,9 @@ function applySettings() {
     // 各ページにタスクを生成
     generateTasksForPages();
     
+    // タスクを作業員に割り当て
+    assignTasksToWorkers();
+    
     // ガントチャートを更新
     renderGanttChart();
     updatePageSelects();
@@ -187,11 +228,11 @@ function applySettings() {
 function generateTasksForPages() {
     projectData.pages.forEach((page, pageIndex) => {
         page.tasks = [];
-        let currentWeek = pageIndex * 2; // ページごとに2週間ずつずらして開始
+        let currentWeek = 0; // 全て週0から開始（並列処理想定）
         
         projectData.taskTemplate.forEach((template, taskIndex) => {
             const task = {
-                id: `${page.id}-task-${taskIndex}`,
+                id: `${page.id}-T${String(taskIndex + 1).padStart(2, '0')}`, // P001-T01, P001-T02...
                 name: template.name,
                 startWeek: currentWeek,
                 duration: template.duration,
@@ -200,7 +241,9 @@ function generateTasksForPages() {
                 pageId: page.id,
                 status: 'pending',
                 assignedTo: null,
-                isClientTask: template.type === 'client-task'  // クライアントタスクフラグ
+                isClientTask: template.type === 'client-task',
+                simulationStatus: 'waiting', // シミュレーション用ステータス
+                progress: 0 // 進捗率
             };
             page.tasks.push(task);
             currentWeek += template.duration;
@@ -243,6 +286,12 @@ function updateTaskQueue() {
 
 // 作業員の追加
 function addWorker() {
+    // 作業員数の上限チェック（最大3人）
+    if (projectData.workers.length >= 3) {
+        alert('作業員の上限は3人までです');
+        return;
+    }
+    
     const name = document.getElementById('workerName').value.trim();
     const skillDirector = parseFloat(document.getElementById('skillDirector').value);
     const skillDesigner = parseFloat(document.getElementById('skillDesigner').value);
@@ -298,28 +347,72 @@ function updateWorkerList() {
         const loadPercentage = (worker.currentLoad / worker.capacity) * 100;
         const loadClass = loadPercentage >= 100 ? 'danger' : loadPercentage >= 80 ? 'warning' : '';
         
+        // 現在のタスクを取得
+        let currentTaskInfo = '';
+        let progressBar = '';
+        let statusText = '待機中';
+        let statusColor = '#95a5a6';
+        
+        if (worker.currentTask) {
+            const task = findTaskById(worker.currentTask);
+            if (task) {
+                statusText = '作業中';
+                statusColor = worker.color || '#e74c3c';
+                const progress = task.progress || 0;
+                currentTaskInfo = `
+                    <div style="font-size: 12px; color: #333; margin-top: 4px; font-weight: 600; background: ${worker.color}20; padding: 4px 8px; border-radius: 4px; border-left: 4px solid ${worker.color};">
+                        🔧 現在: ${task.name}
+                    </div>
+                    <div style="font-size: 10px; color: #666; margin-top: 2px; margin-left: 8px;">
+                        📄 ${task.pageName} | 進捗: ${progress.toFixed(1)}% | 残り: ${((100 - progress) / 100 * task.duration).toFixed(1)}h
+                    </div>
+                `;
+                progressBar = `
+                    <div style="width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; margin-top: 4px; overflow: hidden;">
+                        <div style="height: 100%; background: ${worker.color || '#2ecc71'}; width: ${progress}%; transition: width 0.3s; animation: ${progress > 0 ? 'pulse 2s infinite' : 'none'};"></div>
+                    </div>
+                `;
+            }
+        }
+        
+        // 次のタスクを予測
+        let nextTaskInfo = '';
+        const nextTask = findNextTaskForWorker(worker);
+        if (nextTask) {
+            nextTaskInfo = `
+                <div style="font-size: 11px; color: #666; margin-top: 4px; background: #f8f9fa; padding: 3px 6px; border-radius: 3px;">
+                    ⏭️ 次: ${nextTask.name} (${nextTask.pageName})
+                </div>
+            `;
+        }
+        
         const workerElement = document.createElement('div');
         workerElement.className = 'worker-item';
+        workerElement.style.border = `3px solid ${worker.color || '#ccc'}`;
+        workerElement.style.borderRadius = '8px';
         workerElement.innerHTML = `
             <div class="worker-info">
-                <div class="worker-name">
-                    <span class="worker-color-indicator" style="background: ${worker.color || '#ccc'}; width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px;"></span>
+                <div class="worker-name" style="color: ${worker.color || '#333'}; font-weight: 600; font-size: 14px;">
+                    <span class="worker-color-indicator" style="background: ${worker.color || '#ccc'}; width: 16px; height: 16px; border-radius: 50%; display: inline-block; margin-right: 8px;"></span>
                     ${worker.name}
                 </div>
-                <div class="worker-details">
-                    Dir: ${worker.skills.director} | Des: ${worker.skills.designer} | Cod: ${worker.skills.coder}
+                <div class="worker-details" style="font-size: 10px; color: #666; margin-top: 2px;">
+                    Dir: ${worker.skills.director.toFixed(1)} | Des: ${worker.skills.designer.toFixed(1)} | Cod: ${worker.skills.coder.toFixed(1)}
                 </div>
-                <div class="worker-details" style="margin-top: 4px;">
-                    週${worker.capacity}時間まで
+                <div style="margin-top: 6px; padding: 4px 8px; background: ${statusColor}20; border-radius: 4px; font-size: 11px; font-weight: 600; color: ${statusColor};">
+                    ${statusText}
                 </div>
+                ${currentTaskInfo}
+                ${nextTaskInfo}
+                ${progressBar}
             </div>
-            <div class="worker-load">
+            <div class="worker-load" style="text-align: right; font-size: 10px;">
                 <div>負荷: ${worker.currentLoad.toFixed(1)}/${worker.capacity}h</div>
                 <div class="load-bar">
                     <div class="load-fill ${loadClass}" style="width: ${Math.min(loadPercentage, 100)}%"></div>
                 </div>
             </div>
-            <button onclick="removeWorker('${worker.id}')" style="margin-left: 10px;">削除</button>
+            <button onclick="removeWorker('${worker.id}')" style="margin-left: 10px; padding: 4px 8px; background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">削除</button>
         `;
         workerList.appendChild(workerElement);
     });
@@ -532,7 +625,7 @@ function assignTasksToWorkers() {
                 const skillLevel = worker.skills[requiredSkill] || 0.1;
                 
                 // タスクの期間を時間（四半期）単位で計算
-                const taskHours = task.duration * TIME_CONFIG.WORK_HOURS_PER_DAY; // 週 → 時間
+                const taskHours = task.duration; // 直接時間として使用
                 const adjustedHours = Math.ceil(taskHours / skillLevel); // スキルレベルに基づく調整
                 const adjustedQuarters = hoursToQuarters(adjustedHours); // 時間 → 四半期
                 
@@ -555,7 +648,7 @@ function assignTasksToWorkers() {
                             const designWorker = projectData.workers.find(w => w.id === originalDesignTask.assignedTo);
                             if (designWorker) {
                                 const designSkill = designWorker.skills[getSkillForTaskType(designTask.type)];
-                                const designHours = designTask.duration * TIME_CONFIG.WORK_HOURS_PER_DAY;
+                                const designHours = designTask.duration;
                                 const designAdjustedHours = Math.ceil(designHours / designSkill);
                                 const designQuarters = hoursToQuarters(designAdjustedHours);
                                 maxDesignEndQuarter = Math.max(maxDesignEndQuarter, originalDesignTask.actualStartQuarter + designQuarters);
@@ -1056,24 +1149,33 @@ function renderGanttChart() {
     const body = document.createElement('div');
     body.className = 'gantt-body';
     
-    // ページ別にグループ化されたタスクを使用
-    const pageGroups = collectAllTasks();
-    
-    // タスクが存在する場合のみ表示
-    if (pageGroups.length > 0) {
-        pageGroups.forEach(group => {
-            const pageRow = createPageRowCalendar(group, totalDays, hourWidth);
-            body.appendChild(pageRow);
-        });
-    } else {
-        // 空の状態のメッセージ
+    // シミュレーション中でない場合は空のガントチャートを表示
+    if (!isSimulating) {
         const emptyMessage = document.createElement('div');
         emptyMessage.className = 'empty-message';
         emptyMessage.innerHTML = `
-            <p>タスクがありません。</p>
-            <p>左のサイドバーでプロジェクト設定を行い、タスクを生成してください。</p>
+            <p>シミュレーションを開始すると、作業員がタスクを処理していく様子が表示されます。</p>
+            <p>「▶ シミュレーション開始」ボタンを押してください。</p>
         `;
         body.appendChild(emptyMessage);
+    } else {
+        // シミュレーション中はページ別にグループ化されたタスクを表示
+        const pageGroups = collectAllTasks();
+        
+        if (pageGroups.length > 0) {
+            pageGroups.forEach(group => {
+                const pageRow = createPageRowCalendar(group, totalDays, hourWidth);
+                body.appendChild(pageRow);
+            });
+        } else {
+            const emptyMessage = document.createElement('div');
+            emptyMessage.className = 'empty-message';
+            emptyMessage.innerHTML = `
+                <p>タスクがありません。</p>
+                <p>左のサイドバーでプロジェクト設定を行い、タスクを生成してください。</p>
+            `;
+            body.appendChild(emptyMessage);
+        }
     }
     
     scrollContainer.appendChild(body);
@@ -1153,34 +1255,8 @@ function collectAllTasks() {
         });
     }
     
-    // ミーティングのグループ
-    const meetingTasks = [];
-    projectData.meetings.forEach(meeting => {
-        const meetingInstances = expandMeetingInstances(meeting);
-        meetingInstances.forEach(instance => {
-            meetingTasks.push({
-                ...instance,
-                pageName: '定例ミーティング',
-                source: 'meeting'
-            });
-        });
-    });
-    
-    if (meetingTasks.length > 0) {
-        // 開始週でソート
-        meetingTasks.sort((a, b) => {
-            const aStartWeek = a.actualStartWeek !== undefined ? a.actualStartWeek : a.startWeek;
-            const bStartWeek = b.actualStartWeek !== undefined ? b.actualStartWeek : b.startWeek;
-            return aStartWeek - bStartWeek;
-        });
-        
-        pageGroups.push({
-            type: 'meeting',
-            pageName: '定例ミーティング',
-            pageId: null,
-            tasks: meetingTasks
-        });
-    }
+    // ミーティングは動的に挿入するため、ここでは追加しない
+    // シミュレーション中に適切な位置に挿入される
     
     return pageGroups;
 }
@@ -1566,29 +1642,83 @@ function createPageRowCalendar(pageGroup, totalDays, hourWidth) {
     `;
     
     // 各タスクのバーを配置
-    pageGroup.tasks.forEach(task => {
+    let currentPosition = 0; // 横並びの位置を管理
+    pageGroup.tasks.forEach((task, index) => {
+        // シミュレーション中でない場合は待機状態で表示
+        if (!isSimulating) {
+            // 待機中タスクとして表示（横並びで配置）
+            const taskWidth = Math.max(task.duration * 20, 120); // 時間に比例したサイズ（最小120px）
+            const taskBar = document.createElement('div');
+            taskBar.className = 'task-bar waiting';
+            taskBar.style.cssText = `
+                position: absolute;
+                left: ${currentPosition}px;
+                width: ${taskWidth}px;
+                height: 35px;
+                background: ${getTaskTypeColor(task.type)};
+                border: 2px solid rgba(255,255,255,0.8);
+                border-radius: 4px;
+                top: 7px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                padding: 0 8px;
+                opacity: 0.7;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            `;
+            taskBar.textContent = `${task.name} (${task.duration}h)`;
+            taskBar.title = `${task.name}\nタイプ: ${getTaskTypeLabel(task.type)}\n予定時間: ${task.duration}時間`;
+            barContainer.appendChild(taskBar);
+            
+            // 次のタスクの位置を更新
+            currentPosition += taskWidth + 5; // 5pxの間隔を追加
+            return;
+        }
+        
         const worker = projectData.workers.find(w => w.id === task.assignedTo);
         const workerColor = worker ? getWorkerColor(worker.id) : '#ccc';
         
-        // タスクの開始時間と期間を計算
-        const startDate = new Date(projectData.startDate);
-        const taskStartDate = new Date(startDate);
-        
+        // タスクの開始時間と期間を計算（順次実行）
         let taskStartHour = 0;
-        if (task.actualStartQuarter !== undefined) {
-            taskStartHour = task.actualStartQuarter * 2; // 四半期を時間に変換
-        } else if (task.actualStartWeek !== undefined) {
-            taskStartHour = task.actualStartWeek * 40; // 週を時間に変換（週40時間）
-        } else {
-            taskStartHour = task.startWeek * 40;
+        let taskDurationHours = 0;
+        
+        // 同じページ内の前のタスクの終了時間を計算（順次実行）
+        let cumulativePosition = 0;
+        const currentTaskIndex = pageGroup.tasks.indexOf(task);
+        
+        for (let i = 0; i < currentTaskIndex; i++) {
+            const prevTask = pageGroup.tasks[i];
+            cumulativePosition += prevTask.duration;
         }
         
-        const taskDurationHours = task.durationInQuarters ? 
-            task.durationInQuarters * 2 : 
-            (task.duration || 1) * 40;
+        if (task.actualStartHour !== undefined) {
+            taskStartHour = task.actualStartHour;
+        } else if (task.startedAt !== undefined) {
+            taskStartHour = task.startedAt;
+        } else {
+            taskStartHour = cumulativePosition;
+        }
+        
+        if (task.simulationStatus === 'completed' && task.startedAt !== undefined && task.completedAt !== undefined) {
+            taskDurationHours = task.completedAt - task.startedAt;
+        } else if (task.simulationStatus === 'in-progress' && task.startedAt !== undefined) {
+            // 進行中のタスクは現在時刻までの実際の作業時間
+            const actualWorkedHours = simulationTime - task.startedAt;
+            taskDurationHours = actualWorkedHours;
+        } else {
+            taskDurationHours = task.duration; // 直接時間として使用
+        }
         
         const leftPosition = taskStartHour * hourWidth;
-        const width = Math.max(taskDurationHours * hourWidth - 2, 50); // 最小幅50px
+        const width = Math.max(taskDurationHours * hourWidth - 2, 10); // 最小幅10px
         
         const taskBar = document.createElement('div');
         taskBar.className = 'task-bar';
@@ -1615,15 +1745,20 @@ function createPageRowCalendar(pageGroup, totalDays, hourWidth) {
             padding: 0 8px;
         `;
         
-        // タスクの進捗状況による表示
-        if (task.status === 'completed') {
+        // タスクの進捗状況による表示（プログレッシブバー風）
+        if (task.simulationStatus === 'completed') {
             taskBar.style.opacity = '1';
             taskBar.style.border = '2px solid #27ae60';
-        } else if (task.status === 'in_progress') {
-            taskBar.style.opacity = '0.8';
+            taskBar.style.background = `linear-gradient(to right, ${workerColor} 100%, transparent 100%)`;
+        } else if (task.simulationStatus === 'in-progress') {
+            taskBar.style.opacity = '0.9';
             taskBar.style.border = '2px solid #f39c12';
+            const progress = task.progress || 0;
+            // 進捗に応じたグラデーション
+            taskBar.style.background = `linear-gradient(to right, ${workerColor} ${progress}%, rgba(200,200,200,0.3) ${progress}%)`;
         } else {
-            taskBar.style.opacity = '0.7';
+            taskBar.style.opacity = '0.3';
+            taskBar.style.background = 'rgba(200,200,200,0.3)';
         }
         
         taskBar.textContent = task.name;
@@ -1702,6 +1837,144 @@ function getTaskTypeLabel(type) {
         'meeting': 'ミーティング'
     };
     return labels[type] || type;
+}
+
+// タスクタイプの色を取得
+function getTaskTypeColor(type) {
+    const colors = {
+        'director': '#3498db',
+        'pc-design': '#3498db',
+        'sp-design': '#e74c3c',
+        'coding': '#2ecc71',
+        'client-task': '#95a5a6',
+        'custom-task': '#9b59b6',
+        'meeting': '#f39c12'
+    };
+    return colors[type] || '#6c757d';
+}
+
+// IDでタスクを検索
+function findTaskById(taskId) {
+    // ページタスクから検索
+    for (const page of projectData.pages) {
+        const task = page.tasks.find(t => t.id === taskId);
+        if (task) {
+            task.pageName = page.name;
+            return task;
+        }
+    }
+    
+    // カスタムタスクから検索
+    const customTask = projectData.customTasks.find(t => t.id === taskId);
+    if (customTask) {
+        customTask.pageName = 'カスタムタスク';
+        return customTask;
+    }
+    
+    // ミーティングから検索
+    const meeting = projectData.meetings.find(t => t.id === taskId);
+    if (meeting) {
+        meeting.pageName = 'ミーティング';
+        return meeting;
+    }
+    
+    return null;
+}
+
+// 週次ミーティングを動的に挿入
+function insertMeetingForWeek(currentWeek) {
+    // すでにこの週のミーティングが存在するかチェック
+    const existingMeeting = projectData.pages.find(page => 
+        page.id === `meeting-week-${currentWeek}` || 
+        page.name === `第${currentWeek}週 定例ミーティング`
+    );
+    
+    if (existingMeeting) {
+        return; // すでに存在する場合は何もしない
+    }
+    
+    // 完了したタスクの数を数える
+    let completedPageCount = 0;
+    projectData.pages.forEach(page => {
+        const allCompleted = page.tasks.every(task => task.simulationStatus === 'completed');
+        if (allCompleted) {
+            completedPageCount++;
+        }
+    });
+    
+    // 新しいミーティングページを作成
+    const meetingPage = {
+        id: `meeting-week-${currentWeek}`,
+        name: `第${currentWeek}週 定例ミーティング`,
+        code: `meeting_week_${currentWeek}`,
+        tasks: [{
+            id: `meeting-week-${currentWeek}-task`,
+            name: '週次進捗会議',
+            startWeek: currentWeek,
+            duration: 2, // 2時間
+            type: 'meeting',
+            pageId: `meeting-week-${currentWeek}`,
+            pageName: `第${currentWeek}週 定例ミーティング`,
+            simulationStatus: 'waiting',
+            progress: 0
+        }]
+    };
+    
+    // 完了したページの後に挿入
+    const insertIndex = Math.min(completedPageCount, projectData.pages.length);
+    projectData.pages.splice(insertIndex, 0, meetingPage);
+    
+    // ガントチャートを再描画
+    renderGanttChart();
+}
+
+// 作業員の次のタスクを予測
+function findNextTaskForWorker(worker) {
+    // 現在のタスクが完了に近い場合のみ次のタスクを予測
+    if (worker.currentTask) {
+        const currentTask = findTaskById(worker.currentTask);
+        if (currentTask && currentTask.progress < 80) {
+            return null; // まだ現在のタスクに集中
+        }
+    }
+    
+    // 利用可能なタスクを検索
+    const availableTasks = [];
+    
+    // ページタスクから検索
+    projectData.pages.forEach(page => {
+        page.tasks.forEach(task => {
+            if (task.simulationStatus !== 'completed' && 
+                task.simulationStatus !== 'in-progress' && 
+                task.assignedTo !== worker.id &&
+                canStartTask(task, worker)) {
+                task.pageName = page.name;
+                availableTasks.push(task);
+            }
+        });
+    });
+    
+    // カスタムタスクから検索
+    projectData.customTasks.forEach(task => {
+        if (task.simulationStatus !== 'completed' && 
+            task.simulationStatus !== 'in-progress' && 
+            task.assignedTo !== worker.id &&
+            canStartTask(task, worker)) {
+            task.pageName = 'カスタムタスク';
+            availableTasks.push(task);
+        }
+    });
+    
+    if (availableTasks.length === 0) {
+        return null;
+    }
+    
+    // 最適なタスクを選択（スキルレベルが高いもの）
+    return availableTasks.reduce((best, current) => {
+        const bestSkill = worker.skills[getSkillForTaskType(best.type)] || 0;
+        const currentSkill = worker.skills[getSkillForTaskType(current.type)] || 0;
+        return currentSkill > bestSkill ? current : best;
+    });
 }
 
 // 日付フォーマット
@@ -1859,6 +2132,9 @@ function startSimulation() {
     // 全タスクの進捗をリセット
     resetTaskProgress();
     
+    // ガントチャートを再描画
+    renderGanttChart();
+    
     // シミュレーション開始
     simulationInterval = setInterval(() => {
         simulateHour();
@@ -1876,6 +2152,9 @@ function stopSimulation() {
         clearInterval(simulationInterval);
         simulationInterval = null;
     }
+    
+    // ガントチャートを再描画（空の状態に戻す）
+    renderGanttChart();
 }
 
 // シミュレーション速度の更新
@@ -1921,47 +2200,53 @@ function resetTaskProgress() {
 // 1時間分のシミュレーション
 function simulateHour() {
     const currentWeek = Math.floor(simulationTime / 40); // 週40時間で計算
-    const hourInWeek = simulationTime % 40;
+    const currentHour = simulationTime % 40; // 週内の時間
+    
+    // ミーティングのチェック（毎週月曜日の9時にミーティング）
+    if (currentHour === 0 && currentWeek > 0) { // 週の最初の時間にミーティング
+        insertMeetingForWeek(currentWeek);
+    }
     
     // 各作業員の作業を進める
     projectData.workers.forEach(worker => {
-        // 現在のタスクがない場合、キューから次のタスクを取得
-        if (!worker.currentTask && worker.taskQueue && worker.taskQueue.length > 0) {
-            for (let i = 0; i < worker.taskQueue.length; i++) {
-                const task = worker.taskQueue[i];
-                const taskStartWeek = task.actualStartWeek || task.startWeek;
-                
-                // タスクが開始可能かチェック
-                if (currentWeek >= taskStartWeek && task.simulationStatus === 'waiting') {
-                    // 依存関係チェック
-                    if (canStartTask(task)) {
-                        worker.currentTask = task;
-                        task.simulationStatus = 'in-progress';
-                        task.startedAt = simulationTime;
-                        break;
-                    }
-                }
+        // 現在のタスクがない場合、利用可能なタスクを探す
+        if (!worker.currentTask) {
+            // 全タスクから作業員のスキルに適合するタスクを探す
+            const availableTask = findAvailableTask(worker, currentWeek);
+            if (availableTask) {
+                worker.currentTask = availableTask.id; // タスクIDを保存
+                availableTask.simulationStatus = 'in-progress';
+                availableTask.startedAt = simulationTime;
+                availableTask.progress = 0;
+                availableTask.actualStartWeek = currentWeek;
+                availableTask.actualStartHour = simulationTime;
+                availableTask.assignedTo = worker.id;
             }
         }
         
         // 現在のタスクを進める
         if (worker.currentTask) {
-            const task = worker.currentTask;
-            const requiredSkill = getSkillForTaskType(task.type);
-            const skillLevel = worker.skills[requiredSkill] || 0.1;
-            
-            // 1時間あたりの進捗率
-            const baseHours = getTaskBaseHours(task);
-            const totalHours = baseHours * task.duration;
-            const progressPerHour = (100 / totalHours) * skillLevel;
-            
-            task.progress = Math.min(100, (task.progress || 0) + progressPerHour);
-            worker.totalWorkedHours = (worker.totalWorkedHours || 0) + 1;
-            
-            // タスク完了チェック
-            if (task.progress >= 100) {
-                task.simulationStatus = 'completed';
-                task.completedAt = simulationTime;
+            const task = findTaskById(worker.currentTask);
+            if (task) {
+                const requiredSkill = getSkillForTaskType(task.type);
+                const skillLevel = worker.skills[requiredSkill] || 0.1;
+                
+                // 1時間あたりの進捗率を計算
+                const taskHours = task.duration; // 直接時間として使用
+                const adjustedHours = taskHours / skillLevel; // スキルレベルに応じて調整
+                const progressPerHour = 100 / adjustedHours;
+                
+                task.progress = Math.min(100, (task.progress || 0) + progressPerHour);
+                worker.totalWorkedHours = (worker.totalWorkedHours || 0) + 1;
+                
+                // タスク完了チェック
+                if (task.progress >= 100) {
+                    task.simulationStatus = 'completed';
+                    task.completedAt = simulationTime;
+                    worker.currentTask = null;
+                }
+            } else {
+                // タスクが見つからない場合はクリア
                 worker.currentTask = null;
             }
         }
@@ -1972,6 +2257,7 @@ function simulateHour() {
     
     // 表示更新
     updateSimulationDisplay();
+    renderGanttChart();
     
     // 全タスク完了チェック
     if (isAllTasksCompleted()) {
@@ -1980,9 +2266,100 @@ function simulateHour() {
     }
 }
 
+// 作業員が利用可能なタスクを探す
+function findAvailableTask(worker, currentWeek) {
+    // 全タスクを収集
+    const allTasks = [];
+    projectData.pages.forEach(page => {
+        page.tasks.forEach(task => allTasks.push(task));
+    });
+    projectData.customTasks.forEach(task => allTasks.push(task));
+    projectData.meetings.forEach(meeting => allTasks.push(meeting));
+    
+    // 利用可能なタスクをフィルタリング
+    const availableTasks = allTasks.filter(task => {
+        // 既に完了または進行中のタスクは除外
+        if (task.simulationStatus === 'completed' || task.simulationStatus === 'in-progress') {
+            return false;
+        }
+        
+        // 開始予定週をチェック
+        const taskStartWeek = task.actualStartWeek || task.startWeek || 0;
+        if (currentWeek < taskStartWeek) {
+            return false;
+        }
+        
+        // 作業員のスキルレベルをチェック
+        const requiredSkill = getSkillForTaskType(task.type);
+        const skillLevel = worker.skills[requiredSkill] || 0;
+        if (skillLevel <= 0) {
+            return false;
+        }
+        
+        // 依存関係をチェック
+        if (!canStartTask(task)) {
+            return false;
+        }
+        
+        return true;
+    });
+    
+    // 利用可能なタスクがない場合
+    if (availableTasks.length === 0) {
+        return null;
+    }
+    
+    // タスクの優先度を決定（ページ内の順序を考慮）
+    return availableTasks.reduce((best, current) => {
+        // 1. まず、ページ内の順序を比較
+        const bestPageIndex = getTaskIndexInPage(best);
+        const currentPageIndex = getTaskIndexInPage(current);
+        
+        if (bestPageIndex !== currentPageIndex) {
+            // より早い順序のタスクを優先
+            return currentPageIndex < bestPageIndex ? current : best;
+        }
+        
+        // 2. 同じ順序の場合は、スキルレベルで比較
+        const bestSkill = worker.skills[getSkillForTaskType(best.type)] || 0;
+        const currentSkill = worker.skills[getSkillForTaskType(current.type)] || 0;
+        return currentSkill > bestSkill ? current : best;
+    });
+}
+
+// ページ内でのタスクの順序を取得
+function getTaskIndexInPage(task) {
+    if (!task.pageId) {
+        return 999; // ページタスクでない場合は最後に処理
+    }
+    
+    const page = projectData.pages.find(p => p.id === task.pageId);
+    if (!page) {
+        return 999;
+    }
+    
+    return page.tasks.findIndex(t => t.id === task.id);
+}
+
 // タスクが開始可能かチェック
 function canStartTask(task) {
-    // コーディングタスクの場合、同じページのデザインタスクが完了している必要がある
+    // ページ内のタスクは順次実行する必要がある
+    if (task.pageId) {
+        const page = projectData.pages.find(p => p.id === task.pageId);
+        if (page && page.tasks.length > 0) {
+            // 現在のタスクのインデックスを取得
+            const currentTaskIndex = page.tasks.findIndex(t => t.id === task.id);
+            if (currentTaskIndex > 0) {
+                // 前のタスクが完了しているかチェック
+                const previousTask = page.tasks[currentTaskIndex - 1];
+                if (previousTask.simulationStatus !== 'completed') {
+                    return false;
+                }
+            }
+        }
+    }
+    
+    // 従来のコーディングタスクの依存関係チェック（念のため残す）
     if (task.type === 'coding' || task.name.includes('コーディング')) {
         const pageId = task.pageId;
         const page = projectData.pages.find(p => p.id === pageId);
@@ -2004,7 +2381,11 @@ function updateSimulationDisplay() {
     const currentWeek = Math.floor(simulationTime / 40) + 1;
     const hourInWeek = simulationTime % 40;
     
-    document.getElementById('simulationTime').textContent = `第${currentWeek}週 ${hourInWeek}時間目`;
+    // 要素が存在する場合のみ更新
+    const timeElement = document.getElementById('simulationTime');
+    if (timeElement) {
+        timeElement.textContent = `第${currentWeek}週 ${hourInWeek}時間目`;
+    }
     
     // 統計情報の更新
     let activeCount = 0;
@@ -2014,17 +2395,24 @@ function updateSimulationDisplay() {
     const countTask = (task) => {
         if (task.simulationStatus === 'in-progress') activeCount++;
         else if (task.simulationStatus === 'completed') completedCount++;
-        else if (task.simulationStatus === 'waiting') waitingCount++;
+        else waitingCount++;
     };
     
+    // 全タスクを収集して統計を計算
     projectData.pages.forEach(page => {
         page.tasks.forEach(countTask);
     });
     projectData.customTasks.forEach(countTask);
+    projectData.meetings.forEach(countTask);
     
-    document.getElementById('activeTaskCount').textContent = activeCount;
-    document.getElementById('completedTaskCount').textContent = completedCount;
-    document.getElementById('waitingTaskCount').textContent = waitingCount;
+    // 要素が存在する場合のみ更新
+    const activeElement = document.getElementById('activeTaskCount');
+    const completedElement = document.getElementById('completedTaskCount');
+    const waitingElement = document.getElementById('waitingTaskCount');
+    
+    if (activeElement) activeElement.textContent = activeCount;
+    if (completedElement) completedElement.textContent = completedCount;
+    if (waitingElement) waitingElement.textContent = waitingCount;
     
     // ガントチャートの更新
     updateGanttTaskStatus();
@@ -2066,7 +2454,7 @@ function isAllTasksCompleted() {
     
     const hasIncompleteTasks = projectData.pages.some(page => 
         page.tasks.some(checkTask)
-    ) || projectData.customTasks.some(checkTask);
+    ) || projectData.customTasks.some(checkTask) || projectData.meetings.some(checkTask);
     
     return !hasIncompleteTasks;
 }
@@ -2118,6 +2506,11 @@ function loadFromLocalStorage() {
             }
             
             projectData = loadedData;
+            
+            // 作業員数を3人に制限
+            if (projectData.workers.length > 3) {
+                projectData.workers = projectData.workers.slice(0, 3);
+            }
             
             // UI更新
             document.getElementById('startDate').value = projectData.startDate;

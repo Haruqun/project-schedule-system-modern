@@ -782,6 +782,15 @@
                 <button onclick="document.getElementById('importFile').click()">CSV読込</button>
                 <input type="file" id="importFile" accept=".csv" style="display: none;" onchange="importCSV(event)">
             </div>
+            
+            <div id="simulationInfo" style="display: none; margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                <div style="display: flex; gap: 20px; align-items: center; font-size: 14px;">
+                    <span id="simulationTime">第1週 0時間目</span>
+                    <span>進行中タスク: <strong id="activeTaskCount">0</strong></span>
+                    <span>完了タスク: <strong id="completedTaskCount">0</strong></span>
+                    <span>待機タスク: <strong id="waitingTaskCount">0</strong></span>
+                </div>
+            </div>
         </div>
         
         <div class="main-content">
@@ -801,47 +810,49 @@
                             
                             <div class="form-group">
                                 <label for="pageList">ページ一覧:</label>
-                                <textarea id="pageList">トップページ(top)
-レンタル品一覧(rental_list)
-購入品一覧(purchase_list)
-オプション一覧(option_list)
+                                <textarea id="pageList">ジャンルページ一覧(genre_list)
+ジャンルページ詳細(genre_detail)
+カテゴリページ一覧(category_list)
+カテゴリページ詳細(category_detail)
+選び方ページ - 縦走用アックスの選び方(howto_axe)
+選び方ページ - 登山用軽量ハーネスの活用(howto_harness)
+選び方ページ - アルトテント/テロステント(howto_tent)
+新着商品(new_products)
+キャンペーン(campaign)
+限定アイテム(limited_items)
+Tech Info TOP(tech_top)
+Tech Info 一覧(tech_list)
+Tech Info詳細(tech_detail)
+Tech Info 製品別 一覧(tech_product_list)
+Tech Info 製品別 詳細(tech_product_detail)
 商品詳細(product_detail)
-オプション詳細(option_detail)
-商品比較(product_compare)
-カート(cart)
-注文者情報入力(customer_input)
-お届け先情報入力(delivery_input)
-配送希望日入力(delivery_date)
-決済方法選択(payment_select)
-クレジットカード情報入力(credit_input)
-入力内容確認(confirm)
-注文完了(complete)
-マイページトップ(mypage_top)
-注文履歴一覧(order_history)
-注文詳細(order_detail)
-会員情報編集(member_edit)
-パスワード変更(password_change)
-退会手続き(withdrawal)
-お気に入り一覧(favorite_list)
-領収書発行(receipt)
+マイページ(mypage)
+ご利用にあたって(usage_guide)
+ご利用ガイド一覧(guide_list)
+ご利用ガイド詳細(guide_detail)
+コーポレートTOP(corporate_top)
+会社情報(company_info)
+会社情報詳細(company_detail)
+取扱店(dealers)
+取扱店一覧(dealers_list)
+サポート情報(support)
+取扱説明書一覧 (PDF)(manual_list)
 お問い合わせ(contact)
-お問い合わせ確認(contact_confirm)
-お問い合わせ完了(contact_complete)
-利用ガイド(guide)
-よくある質問(faq)
-プライバシーポリシー(privacy)
-利用規約(terms)
-特定商取引法(commercial_law)
-運営会社(company)
-サイトマップ(sitemap)
-アクセス(access)
-採用情報(recruit)</textarea>
+ニュース(news)
+重要なお知らせ(important_news)
+ブランドTOPページ(brand_top)
+Black Diamondページ(black_diamond)
+製品一覧(product_list)
+ヒストリー(history)
+Ospreyページ(osprey)
+Scarpaページ(scarpa)
+Smartwoolページ(smartwool)</textarea>
                                 <div class="help-text">1行に1ページを入力してください</div>
                             </div>
                             
                             <div class="form-group">
                                 <label for="taskTemplate">タスクテンプレート:</label>
-                                <textarea id="taskTemplate">ワイヤーフレーム作成,2,pc-design
+                                <textarea id="taskTemplate">ワイヤーフレーム作成,2,director
 PCデザイン,3,pc-design
 SPデザイン,3,sp-design
 クライアント確認,2,client-task
