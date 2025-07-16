@@ -92,6 +92,8 @@
         .task-type.designer { background: #f8d7da; color: #842029; }
         .task-type.coder { background: #d1e7dd; color: #0f5132; }
         .task-type.client { background: #fff3cd; color: #664d03; }
+        .task-type.wireframe { background: #e2d5f1; color: #5a3a7e; }
+        .task-type.testing { background: #d4edda; color: #155724; }
         
         /* 作業員エリア */
         .workers-area {
@@ -206,6 +208,172 @@
         
         .btn-success:hover {
             background: #218838;
+        }
+        
+        /* 速度コントロール */
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .speed-control label {
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .speed-control input[type="range"] {
+            width: 150px;
+        }
+        
+        #speedDisplay {
+            font-weight: 600;
+            color: #007bff;
+            min-width: 30px;
+            text-align: center;
+        }
+        
+        /* モーダル */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #adb5bd;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        .worker-form {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .worker-form h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .form-group input[type="text"],
+        .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .skill-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .skill-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .skill-item label {
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .skill-slider {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        
+        .skill-value {
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #007bff;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
         }
         
         .progress-bar {
@@ -326,10 +494,18 @@
         </div>
         
         <div class="controls">
+            <button class="btn-primary" onclick="openWorkerModal()">作業員設定</button>
             <button class="btn-primary" onclick="generateTasks()">タスク生成</button>
+            <button class="btn-primary" onclick="openCustomTaskModal()">カスタムタスク追加</button>
             <button class="btn-success" onclick="startSimulation()">シミュレーション開始</button>
             <button class="btn-primary" onclick="pauseSimulation()">一時停止</button>
             <button class="btn-primary" onclick="resetSimulation()">リセット</button>
+            <button class="btn-primary" onclick="exportToCSV()">CSV出力</button>
+            <div class="speed-control">
+                <label>速度:</label>
+                <input type="range" id="speedSlider" min="1" max="100" value="1" onchange="changeSimulationSpeed(this.value)">
+                <span id="speedDisplay">1x</span>
+            </div>
         </div>
         
         <div class="main-layout">
@@ -394,6 +570,71 @@
                         <div id="worker4-completed"></div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 作業員編集モーダル -->
+    <div id="workerModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>作業員設定</h2>
+                <button class="modal-close" onclick="closeWorkerModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="workerForms"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="saveWorkers()">保存</button>
+                <button class="btn-secondary" onclick="closeWorkerModal()">キャンセル</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- カスタムタスク追加モーダル -->
+    <div id="customTaskModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>カスタムタスク追加</h2>
+                <button class="modal-close" onclick="closeCustomTaskModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>タスク名</label>
+                    <input type="text" id="customTaskName" placeholder="例: 要件定義書作成">
+                </div>
+                <div class="form-group">
+                    <label>タスクタイプ</label>
+                    <select id="customTaskType">
+                        <option value="director">ディレクター</option>
+                        <option value="designer">デザイナー</option>
+                        <option value="coder">コーダー</option>
+                        <option value="client">クライアント</option>
+                        <option value="wireframe">ワイヤーフレーム</option>
+                        <option value="testing">テスト</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>所要時間（時間）</label>
+                    <input type="number" id="customTaskDuration" min="1" value="2">
+                </div>
+                <div class="form-group">
+                    <label>依存タスク（オプション）</label>
+                    <select id="customTaskDependency">
+                        <option value="">なし</option>
+                    </select>
+                </div>
+                
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+                    <h3 style="margin-bottom: 15px;">おすすめカスタムタスク</h3>
+                    <div id="suggestedTasks" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                        <!-- 動的に生成される -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="addCustomTask()">追加</button>
+                <button class="btn-secondary" onclick="closeCustomTaskModal()">キャンセル</button>
             </div>
         </div>
     </div>
