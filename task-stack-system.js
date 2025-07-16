@@ -4,7 +4,7 @@ const PROJECT_START_DATE = new Date('2025-07-16'); // プロジェクト開始�
 let workers = [
     {
         id: 1,
-        name: '山田太郎',
+        name: '大成',
         type: 'director',
         skills: { director: 1.0, designer: 0.3, coder: 0.1, client: 0, wireframe: 1.0, testing: 1.0 },
         currentTask: null,
@@ -15,7 +15,7 @@ let workers = [
     },
     {
         id: 2,
-        name: '佐藤花子',
+        name: '眞鍋',
         type: 'designer',
         skills: { director: 0, designer: 1.0, coder: 0.1, client: 0, wireframe: 1.0, testing: 0 },
         currentTask: null,
@@ -26,6 +26,17 @@ let workers = [
     },
     {
         id: 3,
+        name: '中来田',
+        type: 'designer',
+        skills: { director: 0, designer: 1.0, coder: 0.1, client: 0, wireframe: 1.0, testing: 0 },
+        currentTask: null,
+        completedTasks: [],
+        totalTime: 0,
+        inMeeting: false,
+        fatigue: 0
+    },
+    {
+        id: 4,
         name: '鈴木一郎',
         type: 'coder',
         skills: { director: 0, designer: 0.2, coder: 1.0, client: 0, wireframe: 0.5, testing: 1.0 },
@@ -36,7 +47,7 @@ let workers = [
         fatigue: 0
     },
     {
-        id: 4,
+        id: 5,
         name: 'クライアント',
         type: 'client',
         skills: { director: 0, designer: 0, coder: 0, client: 1.0, wireframe: 0, testing: 0 },
@@ -325,12 +336,93 @@ function getDayName(day) {
 
 // 1時間のシミュレーション
 function simulateOneHour() {
-    // ミーティングチェック（毎週水曜日9-11時）
+    // 昼休みチェック（12時）
+    const isLunchTime = currentHourOfDay === 12;
+    
+    // 週末チェック（土日）
+    const isWeekend = currentDayOfWeek > 5;
+    
+    // ミーティングチェック（毎週水曜日15-17時）
     const isMeetingTime = currentDayOfWeek === 3 && 
-                         currentHourOfDay >= 9 && 
-                         currentHourOfDay < 11;
+                         currentHourOfDay >= 15 && 
+                         currentHourOfDay < 17;
+    
+    // 提出時間チェック（毎日11時と16時）
+    const isSubmissionTime = currentHourOfDay === 11 || currentHourOfDay === 16;
     
     workers.forEach(worker => {
+        // 朝の出社時チェック（9時）
+        if (currentHourOfDay === 9 && !isWeekend) {
+            // 前日の疲労から回復（一晩で40ポイント回復）
+            if (currentDayOfWeek === 1) {
+                // 月曜日は週末でしっかり休んだので完全回復
+                worker.fatigue = 0;
+            } else {
+                // 平日は一晩で40ポイント回復
+                worker.fatigue = Math.max(0, worker.fatigue - 40);
+            }
+            updateWorkerDisplay(worker);
+        }
+        
+        // 週末は作業しない（表示のみ更新）
+        if (isWeekend) {
+            if (worker.fatigue > 0) {
+                worker.fatigue = 0; // 週末で完全回復
+                updateWorkerDisplay(worker);
+            }
+            return; // 週末は作業しない
+        }
+        
+        // 昼休みで回復
+        if (isLunchTime) {
+            worker.fatigue = Math.max(0, worker.fatigue - 10); // 昼休みは10ポイント回復
+            worker.isLunchBreak = true;
+            updateWorkerDisplay(worker);
+            return; // 昼休み中は作業しない
+        } else {
+            worker.isLunchBreak = false;
+        }
+        
+        // 退勤時間（17時）チェック
+        if (currentHourOfDay >= 17) {
+            // 退勤後は作業しない
+            return;
+        }
+        
+        // 提出時間の処理（ディレクターのみ）
+        if (isSubmissionTime && worker.type === 'director' && !worker.inMeeting) {
+            // 提出可能なタスクをチェック
+            const submittableTasks = tasks.filter(t => 
+                t.status === 'pending' && 
+                t.type === 'director' && 
+                t.name.includes('提出') &&
+                canStartTask(t)
+            );
+            
+            if (submittableTasks.length > 0 && !worker.currentTask) {
+                // 現在のタスクを中断して提出業務を優先
+                if (worker.currentTask && worker.currentTask.type !== 'director') {
+                    worker.currentTask.status = 'pending';
+                    worker.currentTask = null;
+                }
+                
+                // 提出タスクを開始
+                const submissionTask = submittableTasks[0];
+                worker.currentTask = submissionTask;
+                submissionTask.status = 'in-progress';
+                submissionTask.assignedWorker = worker.name;
+                
+                const currentDate = calculateCurrentDate(elapsedSeconds);
+                submissionTask.startDate = formatDate(currentDate);
+                submissionTask.startTime = `${currentHourOfDay}:00`;
+                submissionTask.isBatchSubmission = true;
+                
+                renderTaskQueue();
+                updateAllWorkerHeaders();
+                updateWorkerDisplay(worker);
+            }
+        }
+        
         // ミーティング開始
         if (isMeetingTime && !worker.inMeeting) {
             worker.inMeeting = true;
@@ -349,6 +441,8 @@ function simulateOneHour() {
         // ミーティング中の処理
         if (worker.inMeeting) {
             worker.totalTime++;
+            // ミーティング中は少し回復（座っているだけなので）
+            worker.fatigue = Math.max(0, worker.fatigue - 5);
             updateWorkerDisplay(worker);
             return; // ミーティング中は通常タスクを処理しない
         }
@@ -375,6 +469,13 @@ function simulateOneHour() {
         if (worker.currentTask || !worker.inMeeting) {
             let remainingHourCapacity = 1.0; // この1時間で使える作業容量
             worker.totalTime++;
+            
+            // 待機中の場合は疲労回復
+            if (!worker.currentTask && !getNextTaskForWorker(worker)) {
+                worker.fatigue = Math.max(0, worker.fatigue - 3); // 待機中は3ポイント回復
+                updateWorkerDisplay(worker);
+                return;
+            }
             
             // タスクがある限り作業を続ける
             while (remainingHourCapacity > 0 && (worker.currentTask || getNextTaskForWorker(worker))) {
@@ -413,7 +514,11 @@ function simulateOneHour() {
                     
                     // 疲労度を計算（苦手なタスクほど疲れる）
                     const taskSkillLevel = worker.skills[worker.currentTask.type] || 0.1;
-                    const fatigueIncrease = Math.round((1 - taskSkillLevel) * worker.currentTask.duration * 10);
+                    // 基本疲労度: 1時間あたり8-10ポイント（8時間で64-80ポイント）
+                    const baseFatigue = 9;
+                    // スキルによる追加疲労: 苦手なほど疲れる
+                    const skillFatigue = (1 - taskSkillLevel) * 5;
+                    const fatigueIncrease = Math.round((baseFatigue + skillFatigue) * worker.currentTask.duration);
                     worker.fatigue = Math.min(100, worker.fatigue + fatigueIncrease);
                     
                     // 実際にかかった時間を計算（スキルレベルを考慮）
@@ -456,8 +561,18 @@ function getNextTaskForWorker(worker) {
         canStartTask(t) // 依存関係チェック
     );
     
+    // 現在の時間が提出時間でない場合、提出タスクを除外
+    const currentHour = currentHourOfDay;
+    const isSubmissionHour = currentHour === 11 || currentHour === 16;
+    
+    let filteredTasks = availableTasks;
+    if (!isSubmissionHour && worker.type === 'director') {
+        // 提出時間外は提出タスクを後回しにする
+        filteredTasks = availableTasks.filter(t => !t.name.includes('提出'));
+    }
+    
     // まず自分の専門分野（メインロール）のタスクを探す
-    const myRoleTasks = availableTasks.filter(t => {
+    const myRoleTasks = filteredTasks.filter(t => {
         // ディレクターは director タスクと wireframe/testing の高スキルタスク
         if (worker.type === 'director' && (t.type === 'director' || (worker.skills[t.type] >= 1.0))) return true;
         // デザイナーは designer タスクと wireframe の高スキルタスク
@@ -562,29 +677,46 @@ function updateWorkerDisplay(worker) {
         return false;
     }).length;
     
+    // 昼休み中の表示
+    if (worker.isLunchBreak) {
+        currentDiv.className = 'current-task' + (worker.fatigue < 50 ? ' meeting' : '');
+        currentDiv.innerHTML = `
+            <div class="task-name">🍱 昼休み中（回復中）</div>
+            <div class="task-info">
+                <span style="color: #28a745;">疲労度回復: -10 ${getFatigueEmoji(worker.fatigue)}</span>
+            </div>
+        `;
+    }
     // ミーティング中の表示
-    if (worker.inMeeting) {
+    else if (worker.inMeeting) {
         currentDiv.className = 'current-task meeting';
         currentDiv.innerHTML = `
             <div class="task-name">📅 週次ミーティング</div>
             <div class="task-info">
-                <span style="color: #dc3545;">毎週水曜日 9:00-11:00</span>
+                <span style="color: #dc3545;">毎週水曜日 15:00-17:00</span>
+                <span style="color: #28a745; margin-left: 10px;">疲労度回復: -5/h</span>
             </div>
         `;
     }
     // 現在のタスク表示
     else if (worker.currentTask) {
-        const progress = ((worker.currentTask.duration - worker.currentTask.remainingTime) / worker.currentTask.duration) * 100;
-        const remainingHours = Math.ceil(worker.currentTask.remainingTime);
+        const progressMade = worker.currentTask.duration - worker.currentTask.remainingTime;
+        const progress = Math.max(0, Math.min(100, Math.round((progressMade / worker.currentTask.duration) * 100)));
+        const remainingHours = Math.max(0, Math.ceil(worker.currentTask.remainingTime));
         const skillLevel = worker.skills[worker.currentTask.type] || 0.1;
+        
         const estimatedHours = Math.ceil(remainingHours / skillLevel);
         
         currentDiv.className = 'current-task';
+        const isBatchSubmission = worker.currentTask.isBatchSubmission;
         currentDiv.innerHTML = `
-            <div class="task-name">${worker.currentTask.name}</div>
+            <div class="task-name">
+                ${worker.currentTask.name}
+                ${isBatchSubmission ? '<span style="margin-left: 10px; font-size: 12px; color: #dc3545;">📤 定時提出</span>' : ''}
+            </div>
             <div class="task-info" style="display: flex; justify-content: space-between; margin: 5px 0;">
                 <span style="font-size: 12px; color: #666;">標準: ${worker.currentTask.duration}h</span>
-                <span style="font-size: 12px; color: #007bff;">残り: ${estimatedHours}h (スキル: ${skillLevel})</span>
+                <span style="font-size: 12px; color: #007bff;">残り: ${estimatedHours}h</span>
             </div>
             <div class="progress-bar">
                 <div class="progress-fill" style="width: ${progress}%">${Math.round(progress)}%</div>
@@ -592,8 +724,10 @@ function updateWorkerDisplay(worker) {
         `;
     } else {
         currentDiv.className = 'current-task empty';
+        const isRecovering = worker.fatigue > 0;
         currentDiv.innerHTML = `
-            <span>待機中...</span>
+            <span>待機中${isRecovering ? '（休憩中）' : ''}...</span>
+            ${isRecovering ? `<div style="margin-top: 5px; font-size: 12px; color: #17a2b8;">疲労度回復: -3/h ${getFatigueEmoji(worker.fatigue)}</div>` : ''}
             ${priorityTaskCount > 0 ? `<div style="margin-top: 5px; font-size: 12px; color: #28a745;">優先タスク: ${priorityTaskCount}件</div>` : ''}
         `;
     }
@@ -614,9 +748,16 @@ function updateWorkerDisplay(worker) {
                 const actualTime = task.actualTime || task.duration;
                 const timeDiff = actualTime - task.duration;
                 const timeColor = timeDiff > 0 ? '#dc3545' : '#28a745';
+                const typeClass = `task-type ${task.type}`;
                 return `
-                    <div class="completed-task" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>${task.name} (標準${task.duration}h→<span style="color: ${timeColor};">実${Math.round(actualTime)}h</span>)</span>
+                    <div class="completed-task" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                        <div style="flex: 1;">
+                            <div style="margin-bottom: 3px;">${task.name}</div>
+                            <div style="font-size: 11px; display: flex; gap: 8px; align-items: center;">
+                                <span class="${typeClass}" style="padding: 1px 6px; border-radius: 3px; font-size: 10px;">${getTaskTypeLabel(task.type)}</span>
+                                <span>(標準${task.duration}h→<span style="color: ${timeColor};">実${Math.round(actualTime)}h</span>)</span>
+                            </div>
+                        </div>
                         <span style="font-size: 16px;" title="完了時疲労度: ${task.fatigueLevel || 0}">${getFatigueEmoji(task.fatigueLevel || 0)}</span>
                     </div>
                 `;
@@ -722,11 +863,12 @@ function saveWorkers() {
 // 全作業員のヘッダー表示を更新
 function updateAllWorkerHeaders() {
     workers.forEach((worker, index) => {
-        const headerElement = document.querySelector(`.worker-column:nth-child(${index + 1}) .worker-name`);
+        const workerColumn = document.getElementById(`worker${worker.id}-current`).closest('.worker-column');
+        const headerElement = workerColumn.querySelector('.worker-name');
         if (headerElement) {
             headerElement.textContent = worker.name;
         }
-        const statsElement = document.querySelector(`.worker-column:nth-child(${index + 1}) .worker-stats`);
+        const statsElement = workerColumn.querySelector('.worker-stats');
         if (statsElement) {
             const mainSkill = getMainSkillLabel(worker);
             
@@ -753,18 +895,13 @@ function updateAllWorkerHeaders() {
 
 // メインスキルのラベルを取得
 function getMainSkillLabel(worker) {
-    const skills = [
-        { type: 'director', label: 'ディレクター専門', value: worker.skills.director },
-        { type: 'designer', label: 'デザイナー専門', value: worker.skills.designer },
-        { type: 'coder', label: 'コーダー専門', value: worker.skills.coder },
-        { type: 'client', label: '確認・承認担当', value: worker.skills.client || 0 }
-    ];
-    
-    const mainSkill = skills.reduce((max, skill) => 
-        skill.value > max.value ? skill : max
-    , skills[0]);
-    
-    return mainSkill.label;
+    const roleLabels = {
+        'director': 'ディレクター担当',
+        'designer': 'デザイナー担当',
+        'coder': 'コーダー担当',
+        'client': 'クライアント担当'
+    };
+    return roleLabels[worker.type] || '担当';
 }
 
 // CSV出力機能

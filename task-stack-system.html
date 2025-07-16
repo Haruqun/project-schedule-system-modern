@@ -30,7 +30,7 @@
         
         .main-layout {
             display: grid;
-            grid-template-columns: 400px 1fr;
+            grid-template-columns: 16% 1fr;
             gap: 30px;
             height: calc(100vh - 120px);
         }
@@ -98,7 +98,7 @@
         /* 作業員エリア */
         .workers-area {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 20px;
         }
         
@@ -113,9 +113,7 @@
         }
         
         .worker-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            text-align: center;
             margin-bottom: 20px;
             padding-bottom: 15px;
             border-bottom: 2px solid #e9ecef;
@@ -129,6 +127,7 @@
         .worker-stats {
             font-size: 12px;
             color: #666;
+            margin-top: 5px;
         }
         
         .current-task {
@@ -169,10 +168,11 @@
         .completed-task {
             background: #e9ecef;
             border-radius: 6px;
-            padding: 10px;
+            padding: 8px 10px;
             margin-bottom: 8px;
-            font-size: 14px;
-            opacity: 0.8;
+            font-size: 13px;
+            opacity: 0.9;
+            line-height: 1.4;
         }
         
         /* コントロール */
@@ -517,8 +517,8 @@
             <div class="workers-area">
                 <div class="worker-column">
                     <div class="worker-header">
-                        <div class="worker-name">山田太郎</div>
-                        <div class="worker-stats">ディレクター専門</div>
+                        <div class="worker-name">大成</div>
+                        <div class="worker-stats">ディレクター担当</div>
                     </div>
                     <div class="current-task empty" id="worker1-current">
                         <span>待機中...</span>
@@ -531,8 +531,8 @@
                 
                 <div class="worker-column">
                     <div class="worker-header">
-                        <div class="worker-name">佐藤花子</div>
-                        <div class="worker-stats">デザイナー専門</div>
+                        <div class="worker-name">眞鍋</div>
+                        <div class="worker-stats">デザイナー担当</div>
                     </div>
                     <div class="current-task empty" id="worker2-current">
                         <span>待機中...</span>
@@ -545,8 +545,8 @@
                 
                 <div class="worker-column">
                     <div class="worker-header">
-                        <div class="worker-name">鈴木一郎</div>
-                        <div class="worker-stats">コーダー専門</div>
+                        <div class="worker-name">中来田</div>
+                        <div class="worker-stats">デザイナー担当</div>
                     </div>
                     <div class="current-task empty" id="worker3-current">
                         <span>待機中...</span>
@@ -559,8 +559,8 @@
                 
                 <div class="worker-column">
                     <div class="worker-header">
-                        <div class="worker-name">クライアント</div>
-                        <div class="worker-stats">確認・承認担当</div>
+                        <div class="worker-name">鈴木一郎</div>
+                        <div class="worker-stats">コーダー担当</div>
                     </div>
                     <div class="current-task empty" id="worker4-current">
                         <span>待機中...</span>
@@ -568,6 +568,20 @@
                     <div class="completed-tasks">
                         <h3>完了タスク</h3>
                         <div id="worker4-completed"></div>
+                    </div>
+                </div>
+                
+                <div class="worker-column">
+                    <div class="worker-header">
+                        <div class="worker-name">クライアント</div>
+                        <div class="worker-stats">クライアント担当</div>
+                    </div>
+                    <div class="current-task empty" id="worker5-current">
+                        <span>待機中...</span>
+                    </div>
+                    <div class="completed-tasks">
+                        <h3>完了タスク</h3>
+                        <div id="worker5-completed"></div>
                     </div>
                 </div>
             </div>
