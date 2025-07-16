@@ -1,5 +1,6 @@
 // グローバル変数
 let tasks = [];
+const PROJECT_START_DATE = new Date('2025-07-16'); // プロジェクト開始日
 let workers = [
     {
         id: 1,
@@ -27,6 +28,15 @@ let workers = [
         completedTasks: [],
         totalTime: 0,
         inMeeting: false
+    },
+    {
+        id: 4,
+        name: 'クライアント',
+        type: 'client',
+        currentTask: null,
+        completedTasks: [],
+        totalTime: 0,
+        inMeeting: false
     }
 ];
 
@@ -38,11 +48,30 @@ let currentHourOfDay = 9; // 9時スタート
 
 // タスクテンプレート
 const taskTemplates = [
-    { name: 'ワイヤーフレーム作成', type: 'director', duration: 2 },
-    { name: 'PCデザイン', type: 'designer', duration: 3 },
-    { name: 'SPデザイン', type: 'designer', duration: 3 },
-    { name: 'コーディング', type: 'coder', duration: 4 },
-    { name: '動作確認', type: 'coder', duration: 2 }
+    // ワイヤーフレームフェーズ
+    { name: 'ワイヤーフレーム作成', type: 'director', duration: 2, dependsOn: null },
+    { name: 'ワイヤーフレーム提出', type: 'director', duration: 1, dependsOn: 'ワイヤーフレーム作成' },
+    { name: 'クライアント確認（ワイヤー）', type: 'client', duration: 2, dependsOn: 'ワイヤーフレーム提出' },
+    
+    // デザインフェーズ
+    { name: 'PCデザイン', type: 'designer', duration: 3, dependsOn: 'クライアント確認（ワイヤー）' },
+    { name: 'SPデザイン', type: 'designer', duration: 3, dependsOn: 'クライアント確認（ワイヤー）' },
+    { name: 'デザイン提出', type: 'director', duration: 1, dependsOn: ['PCデザイン', 'SPデザイン'] },
+    { name: 'デザイン初回確認', type: 'client', duration: 2, dependsOn: 'デザイン提出' },
+    { name: 'デザイン修正依頼作成', type: 'client', duration: 1, dependsOn: 'デザイン初回確認' },
+    { name: 'デザイン修正対応', type: 'designer', duration: 2, dependsOn: 'デザイン修正依頼作成' },
+    { name: 'デザイン修正版提出', type: 'director', duration: 1, dependsOn: 'デザイン修正対応' },
+    { name: 'デザイン再確認・承認', type: 'client', duration: 1, dependsOn: 'デザイン修正版提出' },
+    
+    // コーディングフェーズ
+    { name: 'コーディング', type: 'coder', duration: 4, dependsOn: 'デザイン再確認・承認' },
+    { name: '動作確認', type: 'coder', duration: 2, dependsOn: 'コーディング' },
+    { name: 'テストサイト提出', type: 'director', duration: 1, dependsOn: '動作確認' },
+    { name: 'コーディング初回確認', type: 'client', duration: 2, dependsOn: 'テストサイト提出' },
+    { name: 'バグ・修正依頼作成', type: 'client', duration: 1, dependsOn: 'コーディング初回確認' },
+    { name: 'バグ修正対応', type: 'coder', duration: 2, dependsOn: 'バグ・修正依頼作成' },
+    { name: '修正版提出', type: 'director', duration: 1, dependsOn: 'バグ修正対応' },
+    { name: '最終確認・リリース承認', type: 'client', duration: 1, dependsOn: '修正版提出' }
 ];
 
 // ページリスト
@@ -90,16 +119,38 @@ function generateTasks() {
     let taskId = 1;
     
     pages.forEach(page => {
+        const pageTasks = [];
+        
         taskTemplates.forEach(template => {
-            tasks.push({
+            const task = {
                 id: taskId++,
                 name: `${page} - ${template.name}`,
                 page: page,
                 type: template.type,
                 duration: template.duration,
                 remainingTime: template.duration,
-                status: 'pending'
-            });
+                status: 'pending',
+                dependsOn: template.dependsOn,
+                templateName: template.name
+            };
+            tasks.push(task);
+            pageTasks.push(task);
+        });
+        
+        // 同じページ内のタスクの依存関係を設定
+        pageTasks.forEach(task => {
+            if (task.dependsOn) {
+                if (Array.isArray(task.dependsOn)) {
+                    task.dependsOnTasks = task.dependsOn.map(depName => 
+                        pageTasks.find(t => t.templateName === depName)
+                    ).filter(t => t);
+                } else {
+                    const depTask = pageTasks.find(t => t.templateName === task.dependsOn);
+                    task.dependsOnTasks = depTask ? [depTask] : [];
+                }
+            } else {
+                task.dependsOnTasks = [];
+            }
         });
     });
     
@@ -130,7 +181,8 @@ function getTaskTypeLabel(type) {
     const labels = {
         director: 'ディレクター',
         designer: 'デザイナー',
-        coder: 'コーダー'
+        coder: 'コーダー',
+        client: 'クライアント'
     };
     return labels[type] || type;
 }
@@ -140,10 +192,16 @@ function updateStats() {
     const total = tasks.length;
     const completed = tasks.filter(t => t.status === 'completed').length;
     const remaining = total - completed;
+    const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
     
     document.getElementById('totalTasks').textContent = total;
     document.getElementById('completedTasks').textContent = completed;
     document.getElementById('remainingTasks').textContent = remaining;
+    
+    // プログレスバーの更新
+    const progressBar = document.getElementById('overallProgress');
+    progressBar.style.width = `${progressPercent}%`;
+    progressBar.querySelector('.progress-text').textContent = `${progressPercent}%`;
 }
 
 // シミュレーション開始
@@ -202,8 +260,36 @@ function updateElapsedTime() {
     currentDayOfWeek = days + 1; // 1=月曜日
     currentHourOfDay = hoursInDay + 9; // 9時始業
     
+    // 実際の日付を計算
+    const currentDate = calculateCurrentDate(totalHours);
+    
     document.getElementById('elapsedTime').textContent = 
-        `第${weeks + 1}週 ${getDayName(currentDayOfWeek)}曜日 ${currentHourOfDay}時`;
+        `第${weeks + 1}週 ${getDayName(currentDayOfWeek)}曜日 ${currentHourOfDay}時 (${formatDate(currentDate)})`;
+}
+
+// 現在の日付を計算
+function calculateCurrentDate(totalHours) {
+    const totalDays = Math.floor(totalHours / 8);
+    const totalWeeks = Math.floor(totalDays / 5);
+    const daysInWeek = totalDays % 5;
+    
+    const currentDate = new Date(PROJECT_START_DATE);
+    currentDate.setDate(PROJECT_START_DATE.getDate() + (totalWeeks * 7) + daysInWeek);
+    
+    // 週末をスキップ
+    while (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return currentDate;
+}
+
+// 日付フォーマット
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}/${month}/${day}`;
 }
 
 // 曜日名取得
@@ -214,8 +300,8 @@ function getDayName(day) {
 
 // 1時間のシミュレーション
 function simulateOneHour() {
-    // ミーティングチェック（毎週月曜日9-11時）
-    const isMeetingTime = currentDayOfWeek === 1 && 
+    // ミーティングチェック（毎週水曜日9-11時）
+    const isMeetingTime = currentDayOfWeek === 3 && 
                          currentHourOfDay >= 9 && 
                          currentHourOfDay < 11;
     
@@ -281,19 +367,30 @@ function simulateOneHour() {
 
 // ワーカーに適したタスクを取得
 function getNextTaskForWorker(worker) {
-    const pendingTasks = tasks.filter(t => 
+    const availableTasks = tasks.filter(t => 
         t.status === 'pending' && 
-        t.type === worker.type
+        t.type === worker.type &&
+        canStartTask(t) // 依存関係チェック
     );
     
     // 同じページのタスクを優先
     if (worker.completedTasks.length > 0) {
         const lastPage = worker.completedTasks[worker.completedTasks.length - 1].page;
-        const samePageTask = pendingTasks.find(t => t.page === lastPage);
+        const samePageTask = availableTasks.find(t => t.page === lastPage);
         if (samePageTask) return samePageTask;
     }
     
-    return pendingTasks[0] || null;
+    return availableTasks[0] || null;
+}
+
+// タスクが開始可能かチェック
+function canStartTask(task) {
+    if (!task.dependsOnTasks || task.dependsOnTasks.length === 0) {
+        return true;
+    }
+    
+    // すべての依存タスクが完了していることを確認
+    return task.dependsOnTasks.every(depTask => depTask.status === 'completed');
 }
 
 // ワーカーの表示更新
@@ -307,7 +404,7 @@ function updateWorkerDisplay(worker) {
         currentDiv.innerHTML = `
             <div class="task-name">📅 週次ミーティング</div>
             <div class="task-info">
-                <span style="color: #dc3545;">毎週月曜日 9:00-11:00</span>
+                <span style="color: #dc3545;">毎週水曜日 9:00-11:00</span>
             </div>
         `;
     }

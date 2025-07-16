@@ -91,11 +91,12 @@
         .task-type.director { background: #cfe2ff; color: #084298; }
         .task-type.designer { background: #f8d7da; color: #842029; }
         .task-type.coder { background: #d1e7dd; color: #0f5132; }
+        .task-type.client { background: #fff3cd; color: #664d03; }
         
         /* 作業員エリア */
         .workers-area {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 20px;
         }
         
@@ -104,6 +105,9 @@
             border-radius: 10px;
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
         
         .worker-header {
@@ -149,8 +153,9 @@
         }
         
         .completed-tasks {
-            max-height: 400px;
+            flex: 1;
             overflow-y: auto;
+            min-height: 0;
         }
         
         .completed-tasks h3 {
@@ -248,6 +253,45 @@
             font-size: 14px;
             color: #666;
         }
+        
+        /* 全体プログレスバー */
+        .overall-progress {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .progress-bar-large {
+            width: 100%;
+            height: 40px;
+            background: #e9ecef;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-fill-large {
+            height: 100%;
+            background: linear-gradient(45deg, #28a745, #20c997);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+            position: relative;
+            min-width: 50px;
+        }
+        
+        .progress-text {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
@@ -267,9 +311,9 @@
                 <div class="stat-value" id="remainingTasks">0</div>
                 <div class="stat-label">残タスク</div>
             </div>
-            <div class="stat-item">
-                <div class="stat-value" id="elapsedTime">0:00</div>
-                <div class="stat-label">経過時間</div>
+            <div class="stat-item" style="min-width: 300px;">
+                <div class="stat-value" id="elapsedTime" style="font-size: 18px;">第1週 月曜日 9時</div>
+                <div class="stat-label">現在時刻</div>
             </div>
         </div>
         
@@ -334,6 +378,20 @@
                     <div class="completed-tasks">
                         <h3>完了タスク</h3>
                         <div id="worker3-completed"></div>
+                    </div>
+                </div>
+                
+                <div class="worker-column">
+                    <div class="worker-header">
+                        <div class="worker-name">クライアント</div>
+                        <div class="worker-stats">確認・承認担当</div>
+                    </div>
+                    <div class="current-task empty" id="worker4-current">
+                        <span>待機中...</span>
+                    </div>
+                    <div class="completed-tasks">
+                        <h3>完了タスク</h3>
+                        <div id="worker4-completed"></div>
                     </div>
                 </div>
             </div>
