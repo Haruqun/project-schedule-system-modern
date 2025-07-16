@@ -10,7 +10,8 @@ let workers = [
         currentTask: null,
         completedTasks: [],
         totalTime: 0,
-        inMeeting: false
+        inMeeting: false,
+        fatigue: 0 // 疲労度 0-100
     },
     {
         id: 2,
@@ -20,7 +21,8 @@ let workers = [
         currentTask: null,
         completedTasks: [],
         totalTime: 0,
-        inMeeting: false
+        inMeeting: false,
+        fatigue: 0
     },
     {
         id: 3,
@@ -30,7 +32,8 @@ let workers = [
         currentTask: null,
         completedTasks: [],
         totalTime: 0,
-        inMeeting: false
+        inMeeting: false,
+        fatigue: 0
     },
     {
         id: 4,
@@ -40,7 +43,8 @@ let workers = [
         currentTask: null,
         completedTasks: [],
         totalTime: 0,
-        inMeeting: false
+        inMeeting: false,
+        fatigue: 0
     }
 ];
 
@@ -260,6 +264,7 @@ function resetSimulation() {
         worker.currentTask = null;
         worker.completedTasks = [];
         worker.totalTime = 0;
+        worker.fatigue = 0;
         updateWorkerDisplay(worker);
     });
     
@@ -362,6 +367,7 @@ function simulateOneHour() {
                 availableTask.startTime = `${currentHourOfDay}:00`;
                 
                 renderTaskQueue();
+                updateAllWorkerHeaders(); // 優先タスク数を更新
             }
         }
         
@@ -387,6 +393,7 @@ function simulateOneHour() {
                     nextTask.startTime = `${currentHourOfDay}:00`;
                     
                     renderTaskQueue();
+                updateAllWorkerHeaders(); // 優先タスク数を更新
                 }
                 
                 // 現在のタスクを進める
@@ -404,13 +411,24 @@ function simulateOneHour() {
                     worker.currentTask.endDate = formatDate(completedDate);
                     worker.currentTask.endTime = `${currentHourOfDay}:00`;
                     
+                    // 疲労度を計算（苦手なタスクほど疲れる）
+                    const taskSkillLevel = worker.skills[worker.currentTask.type] || 0.1;
+                    const fatigueIncrease = Math.round((1 - taskSkillLevel) * worker.currentTask.duration * 10);
+                    worker.fatigue = Math.min(100, worker.fatigue + fatigueIncrease);
+                    
+                    // 実際にかかった時間を計算（スキルレベルを考慮）
+                    const actualTimeSpent = worker.currentTask.duration / taskSkillLevel;
+                    
                     worker.currentTask.status = 'completed';
                     worker.completedTasks.push({
                         ...worker.currentTask,
-                        completedAt: elapsedSeconds
+                        completedAt: elapsedSeconds,
+                        fatigueLevel: worker.fatigue, // タスク完了時の疲労度を記録
+                        actualTime: actualTimeSpent // 実際にかかった時間を記録
                     });
                     worker.currentTask = null;
                     updateStats();
+                    updateAllWorkerHeaders(); // 優先タスク数を更新
                 }
             }
             
@@ -438,12 +456,36 @@ function getNextTaskForWorker(worker) {
         canStartTask(t) // 依存関係チェック
     );
     
-    // スキルレベルでタスクをグループ分け
+    // まず自分の専門分野（メインロール）のタスクを探す
+    const myRoleTasks = availableTasks.filter(t => {
+        // ディレクターは director タスクと wireframe/testing の高スキルタスク
+        if (worker.type === 'director' && (t.type === 'director' || (worker.skills[t.type] >= 1.0))) return true;
+        // デザイナーは designer タスクと wireframe の高スキルタスク
+        if (worker.type === 'designer' && (t.type === 'designer' || (t.type === 'wireframe' && worker.skills.wireframe >= 1.0))) return true;
+        // コーダーは coder タスクと testing の高スキルタスク
+        if (worker.type === 'coder' && (t.type === 'coder' || (t.type === 'testing' && worker.skills.testing >= 1.0))) return true;
+        // クライアントは client タスクのみ
+        if (worker.type === 'client' && t.type === 'client') return true;
+        return false;
+    });
+    
+    // 自分の専門分野のタスクがあればそれを優先
+    if (myRoleTasks.length > 0) {
+        // 同じページのタスクを優先
+        if (worker.completedTasks.length > 0) {
+            const lastPage = worker.completedTasks[worker.completedTasks.length - 1].page;
+            const samePageTask = myRoleTasks.find(t => t.page === lastPage);
+            if (samePageTask) return samePageTask;
+        }
+        return myRoleTasks[0];
+    }
+    
+    // 専門分野のタスクがない場合のみ、スキルレベルでグループ分け
     const specialtyTasks = availableTasks.filter(t => worker.skills[t.type] >= 0.8); // 専門領域（80%以上）
     const competentTasks = availableTasks.filter(t => worker.skills[t.type] >= 0.5 && worker.skills[t.type] < 0.8); // ある程度できる（50%以上）
     const lowSkillTasks = availableTasks.filter(t => worker.skills[t.type] < 0.5); // 苦手な領域
     
-    // 専門領域のタスクを最優先
+    // 専門領域のタスクを優先
     if (specialtyTasks.length > 0) {
         // 同じページのタスクを優先
         if (worker.completedTasks.length > 0) {
@@ -489,10 +531,36 @@ function canStartTask(task) {
     return task.dependsOnTasks.every(depTask => depTask.status === 'completed');
 }
 
+// 疲労度から顔文字を取得
+function getFatigueEmoji(fatigue) {
+    if (fatigue === 0) return '😀'; // 元気満々
+    if (fatigue < 20) return '😊'; // 笑顔
+    if (fatigue < 40) return '🙂'; // 普通
+    if (fatigue < 60) return '😐'; // 真顔
+    if (fatigue < 80) return '😩'; // 疲れた
+    return '😵'; // へとへと
+}
+
 // ワーカーの表示更新
 function updateWorkerDisplay(worker) {
     const currentDiv = document.getElementById(`worker${worker.id}-current`);
     const completedDiv = document.getElementById(`worker${worker.id}-completed`);
+    
+    // 優先タスク数を計算
+    const availableTasks = tasks.filter(t => 
+        t.status === 'pending' && 
+        worker.skills[t.type] > 0 && 
+        canStartTask(t)
+    );
+    
+    const priorityTaskCount = availableTasks.filter(t => {
+        // 自分の専門分野のタスクをカウント
+        if (worker.type === 'director' && (t.type === 'director' || (worker.skills[t.type] >= 1.0))) return true;
+        if (worker.type === 'designer' && (t.type === 'designer' || (t.type === 'wireframe' && worker.skills.wireframe >= 1.0))) return true;
+        if (worker.type === 'coder' && (t.type === 'coder' || (t.type === 'testing' && worker.skills.testing >= 1.0))) return true;
+        if (worker.type === 'client' && t.type === 'client') return true;
+        return false;
+    }).length;
     
     // ミーティング中の表示
     if (worker.inMeeting) {
@@ -524,23 +592,35 @@ function updateWorkerDisplay(worker) {
         `;
     } else {
         currentDiv.className = 'current-task empty';
-        currentDiv.innerHTML = '<span>待機中...</span>';
+        currentDiv.innerHTML = `
+            <span>待機中...</span>
+            ${priorityTaskCount > 0 ? `<div style="margin-top: 5px; font-size: 12px; color: #28a745;">優先タスク: ${priorityTaskCount}件</div>` : ''}
+        `;
     }
     
     // 完了タスク表示
     const completedCount = worker.completedTasks.length;
+    const totalWorkHours = worker.completedTasks.reduce((sum, task) => sum + (task.actualTime || task.duration), 0);
+    
     completedDiv.innerHTML = `
-        <div style="font-weight: 600; margin-bottom: 10px; color: #28a745;">
-            完了: ${completedCount}件
+        <div style="font-weight: 600; margin-bottom: 10px; color: #28a745; display: flex; justify-content: space-between; align-items: center;">
+            <span>完了: ${completedCount}件 / 実働: ${Math.round(totalWorkHours)}時間</span>
+            <span style="font-size: 24px;">${getFatigueEmoji(worker.fatigue)}</span>
         </div>
         ${worker.completedTasks
             .slice() // 全件表示
             .reverse()
-            .map(task => `
-                <div class="completed-task">
-                    ${task.name} (${task.duration}h)
-                </div>
-            `).join('')}
+            .map(task => {
+                const actualTime = task.actualTime || task.duration;
+                const timeDiff = actualTime - task.duration;
+                const timeColor = timeDiff > 0 ? '#dc3545' : '#28a745';
+                return `
+                    <div class="completed-task" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>${task.name} (標準${task.duration}h→<span style="color: ${timeColor};">実${Math.round(actualTime)}h</span>)</span>
+                        <span style="font-size: 16px;" title="完了時疲労度: ${task.fatigueLevel || 0}">${getFatigueEmoji(task.fatigueLevel || 0)}</span>
+                    </div>
+                `;
+            }).join('')}
     `;
 }
 
@@ -649,8 +729,25 @@ function updateAllWorkerHeaders() {
         const statsElement = document.querySelector(`.worker-column:nth-child(${index + 1}) .worker-stats`);
         if (statsElement) {
             const mainSkill = getMainSkillLabel(worker);
-            statsElement.textContent = mainSkill;
+            
+            // 優先タスク数を計算
+            const availableTasks = tasks.filter(t => 
+                t.status === 'pending' && 
+                worker.skills[t.type] > 0 && 
+                canStartTask(t)
+            );
+            
+            const priorityTaskCount = availableTasks.filter(t => {
+                if (worker.type === 'director' && (t.type === 'director' || (worker.skills[t.type] >= 1.0))) return true;
+                if (worker.type === 'designer' && (t.type === 'designer' || (t.type === 'wireframe' && worker.skills.wireframe >= 1.0))) return true;
+                if (worker.type === 'coder' && (t.type === 'coder' || (t.type === 'testing' && worker.skills.testing >= 1.0))) return true;
+                if (worker.type === 'client' && t.type === 'client') return true;
+                return false;
+            }).length;
+            
+            statsElement.innerHTML = `${mainSkill}<br><span style="font-size: 11px; color: #28a745;">優先タスク: ${priorityTaskCount}件</span>`;
         }
+        updateWorkerDisplay(worker);
     });
 }
 
