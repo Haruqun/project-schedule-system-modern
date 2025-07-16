@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gantt Debug Test</title>
+</head>
+<body>
+    <h1>Gantt Chart Debug Test</h1>
+    <button onclick="debugSimulation()">Debug Simulation</button>
+    <pre id="debugOutput"></pre>
+
+    <script>
+        // Load the gantt-scheduler2.js functions
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        async function debugSimulation() {
+            // Load the main script
+            await loadScript('gantt-scheduler2.js');
+            
+            const output = document.getElementById('debugOutput');
+            let debugInfo = [];
+
+            // Check initial state
+            debugInfo.push("=== Initial State ===");
+            debugInfo.push(`Workers: ${projectData.workers.length}`);
+            debugInfo.push(`Pages: ${projectData.pages.length}`);
+            
+            // Check workers
+            debugInfo.push("\n=== Workers ===");
+            projectData.workers.forEach(worker => {
+                debugInfo.push(`${worker.name}:`);
+                debugInfo.push(`  Skills: ${JSON.stringify(worker.skills)}`);
+                debugInfo.push(`  Current Task: ${worker.currentTask}`);
+            });
+
+            // Check tasks
+            debugInfo.push("\n=== Page Tasks ===");
+            let totalTasks = 0;
+            projectData.pages.forEach(page => {
+                if (page.tasks.length > 0) {
+                    debugInfo.push(`${page.name}: ${page.tasks.length} tasks`);
+                    page.tasks.forEach(task => {
+                        debugInfo.push(`  - ${task.name} (${task.type}) - Status: ${task.simulationStatus}`);
+                        totalTasks++;
+                    });
+                }
+            });
+            debugInfo.push(`Total tasks: ${totalTasks}`);
+
+            // Simulate finding available tasks for first worker
+            if (projectData.workers.length > 0) {
+                debugInfo.push("\n=== Testing findAvailableTask for first worker ===");
+                const worker = projectData.workers[0];
+                const currentWeek = 0;
+                
+                // Manually check what tasks should be available
+                const allTasks = [];
+                projectData.pages.forEach(page => {
+                    page.tasks.forEach(task => allTasks.push(task));
+                });
+
+                debugInfo.push(`\nChecking ${allTasks.length} tasks for ${worker.name}:`);
+                
+                allTasks.forEach(task => {
+                    const requiredSkill = getSkillForTaskType(task.type);
+                    const skillLevel = worker.skills[requiredSkill] || 0;
+                    const canStart = canStartTask(task);
+                    
+                    debugInfo.push(`\n  Task: ${task.name} (${task.type})`);
+                    debugInfo.push(`    Required skill: ${requiredSkill}`);
+                    debugInfo.push(`    Worker skill level: ${skillLevel}`);
+                    debugInfo.push(`    Simulation status: ${task.simulationStatus}`);
+                    debugInfo.push(`    Can start (dependencies): ${canStart}`);
+                    debugInfo.push(`    Start week: ${task.startWeek}`);
+                    
+                    if (task.simulationStatus !== 'waiting') {
+                        debugInfo.push(`    ❌ Not waiting`);
+                    } else if (skillLevel <= 0) {
+                        debugInfo.push(`    ❌ No skill`);
+                    } else if (!canStart) {
+                        debugInfo.push(`    ❌ Dependencies not met`);
+                    } else if (currentWeek < (task.startWeek || 0)) {
+                        debugInfo.push(`    ❌ Too early`);
+                    } else {
+                        debugInfo.push(`    ✅ Available!`);
+                    }
+                });
+
+                // Actually call findAvailableTask
+                const availableTask = findAvailableTask(worker, currentWeek);
+                debugInfo.push(`\nfindAvailableTask result: ${availableTask ? availableTask.name : 'null'}`);
+            }
+
+            output.textContent = debugInfo.join('\n');
+        }
+
+        // Auto-run on load
+        window.onload = () => {
+            setTimeout(debugSimulation, 1000);
+        };
+    </script>
+</body>
+</html>

@@ -67,13 +67,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // デフォルトの定例ミーティングを追加
     addDefaultMeetings();
     
+    // データがない場合は初期設定を適用
+    if (projectData.pages.length === 0) {
+        // 初回起動時は設定を適用してタスクを生成
+        applySettings(true); // 初期化時はアラートを表示しない
+    }
+    
     // タスクを作業員に割り当て
     assignTasksToWorkers();
-    
-    // データがない場合はサンプルデータを設定 (コメントアウト - 空のチャートを表示)
-    // if (projectData.pages.length === 0) {
-    //     loadSampleData();
-    // }
 });
 
 // サンプル作業員を追加
@@ -176,7 +177,7 @@ function toggleSidebar() {
 }
 
 // プロジェクト設定の適用
-function applySettings() {
+function applySettings(suppressAlert = false) {
     // ページ一覧の解析
     const pageListText = document.getElementById('pageList').value;
     projectData.pages = pageListText.split('\n')
@@ -221,7 +222,10 @@ function applySettings() {
     updatePageSelects();
     saveToLocalStorage();
     
-    alert('プロジェクト設定を適用しました');
+    // 初期化時（ページロード時）はアラートを表示しない
+    if (!suppressAlert) {
+        alert('プロジェクト設定を適用しました');
+    }
 }
 
 // 各ページにタスクを生成
@@ -344,9 +348,6 @@ function updateWorkerList() {
     workerList.innerHTML = '';
     
     projectData.workers.forEach(worker => {
-        const loadPercentage = (worker.currentLoad / worker.capacity) * 100;
-        const loadClass = loadPercentage >= 100 ? 'danger' : loadPercentage >= 80 ? 'warning' : '';
-        
         // 現在のタスクを取得
         let currentTaskInfo = '';
         let progressBar = '';
@@ -405,12 +406,6 @@ function updateWorkerList() {
                 ${currentTaskInfo}
                 ${nextTaskInfo}
                 ${progressBar}
-            </div>
-            <div class="worker-load" style="text-align: right; font-size: 10px;">
-                <div>負荷: ${worker.currentLoad.toFixed(1)}/${worker.capacity}h</div>
-                <div class="load-bar">
-                    <div class="load-fill ${loadClass}" style="width: ${Math.min(loadPercentage, 100)}%"></div>
-                </div>
             </div>
             <button onclick="removeWorker('${worker.id}')" style="margin-left: 10px; padding: 4px 8px; background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 10px;">削除</button>
         `;
@@ -1012,134 +1007,32 @@ function renderGanttChart() {
     timeline.style.display = 'flex';
     timeline.style.flex = '1';
     
-    // カレンダー形式のヘッダー作成
+    // 週ベースのシンプルなタイムライン作成
     const startDate = new Date(projectData.startDate);
     const hourWidth = 25; // 1時間あたりのピクセル幅
-    const dayWidth = TIME_CONFIG.WORK_HOURS_PER_DAY * hourWidth; // 8時間 × 25px = 200px
+    const weekWidth = 40 * hourWidth; // 週40時間 × 25px = 1000px
     const totalDays = projectData.weeks * TIME_CONFIG.WORK_DAYS_PER_WEEK;
     
-    // 月レベルのヘッダー
-    const monthHeader = document.createElement('div');
-    monthHeader.className = 'month-header';
-    monthHeader.style.display = 'flex';
-    monthHeader.style.height = '30px';
-    monthHeader.style.backgroundColor = '#e9ecef';
-    monthHeader.style.borderBottom = '1px solid #dee2e6';
-    
-    // 日レベルのヘッダー
-    const dayHeader = document.createElement('div');
-    dayHeader.className = 'day-header';
-    dayHeader.style.display = 'flex';
-    dayHeader.style.height = '25px';
-    dayHeader.style.backgroundColor = '#f1f3f4';
-    dayHeader.style.borderBottom = '1px solid #dee2e6';
-    
-    // 時間レベルのヘッダー
-    const hourHeader = document.createElement('div');
-    hourHeader.className = 'hour-header';
-    hourHeader.style.display = 'flex';
-    hourHeader.style.height = '20px';
-    hourHeader.style.backgroundColor = '#f8f9fa';
-    hourHeader.style.borderBottom = '1px solid #dee2e6';
-    
-    let currentMonth = null;
-    let monthSpan = 0;
-    
-    for (let dayIndex = 0; dayIndex < totalDays; dayIndex++) {
-        const currentDate = new Date(startDate);
-        currentDate.setDate(startDate.getDate() + Math.floor(dayIndex / TIME_CONFIG.WORK_DAYS_PER_WEEK) * 7 + (dayIndex % TIME_CONFIG.WORK_DAYS_PER_WEEK));
+    // 週ヘッダー作成
+    for (let weekIndex = 0; weekIndex < projectData.weeks; weekIndex++) {
+        const weekCell = document.createElement('div');
+        weekCell.className = 'week-cell';
+        weekCell.style.width = `${weekWidth}px`;
+        weekCell.style.minWidth = `${weekWidth}px`;
+        weekCell.style.borderRight = '1px solid #dee2e6';
+        weekCell.style.textAlign = 'center';
+        weekCell.style.fontSize = '14px';
+        weekCell.style.fontWeight = '600';
+        weekCell.style.padding = '10px';
+        weekCell.style.backgroundColor = weekIndex % 2 === 0 ? '#f8f9fa' : '#ffffff';
         
-        // 土日をスキップして営業日のみを表示
-        while (currentDate.getDay() === 0 || currentDate.getDay() === 6) {
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
+        const weekStartDate = new Date(startDate);
+        weekStartDate.setDate(startDate.getDate() + weekIndex * 7);
         
-        const month = currentDate.getMonth();
-        const date = currentDate.getDate();
-        const dayOfWeek = currentDate.getDay();
-        const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
-        
-        // 月ヘッダー
-        if (currentMonth !== month) {
-            if (monthSpan > 0) {
-                // 前の月のヘッダーを完成させる
-                const prevMonthCell = monthHeader.lastChild;
-                if (prevMonthCell) {
-                    prevMonthCell.style.width = `${monthSpan * dayWidth}px`;
-                }
-            }
-            
-            currentMonth = month;
-            monthSpan = 0;
-            
-            const monthCell = document.createElement('div');
-            monthCell.className = 'month-cell';
-            monthCell.style.borderRight = '1px solid #dee2e6';
-            monthCell.style.textAlign = 'center';
-            monthCell.style.fontSize = '14px';
-            monthCell.style.fontWeight = '600';
-            monthCell.style.color = '#495057';
-            monthCell.style.padding = '5px';
-            monthCell.textContent = `${currentDate.getFullYear()}年${month + 1}月`;
-            monthHeader.appendChild(monthCell);
-        }
-        monthSpan++;
-        
-        // 日ヘッダー
-        const dayCell = document.createElement('div');
-        dayCell.className = 'day-cell';
-        dayCell.style.width = `${dayWidth}px`;
-        dayCell.style.borderRight = '1px solid #dee2e6';
-        dayCell.style.textAlign = 'center';
-        dayCell.style.fontSize = '12px';
-        dayCell.style.fontWeight = '500';
-        dayCell.style.color = '#6c757d';
-        dayCell.style.padding = '3px';
-        dayCell.textContent = `${date}日 (${dayNames[dayOfWeek]})`;
-        
-        // 今日の日付をハイライト
-        const today = new Date();
-        if (currentDate.toDateString() === today.toDateString()) {
-            dayCell.style.backgroundColor = '#fff3cd';
-            dayCell.style.color = '#856404';
-        }
-        
-        dayHeader.appendChild(dayCell);
-        
-        // 時間ヘッダー
-        const hourContainer = document.createElement('div');
-        hourContainer.className = 'hour-container';
-        hourContainer.style.display = 'flex';
-        hourContainer.style.width = `${dayWidth}px`;
-        hourContainer.style.borderRight = '1px solid #dee2e6';
-        
-        for (let hour = 9; hour < 17; hour++) { // 9:00-17:00
-            const hourCell = document.createElement('div');
-            hourCell.className = 'hour-cell';
-            hourCell.style.width = `${hourWidth}px`;
-            hourCell.style.height = '100%';
-            hourCell.style.borderRight = '1px solid #f0f0f0';
-            hourCell.style.backgroundColor = hour % 2 === 1 ? '#fafafa' : '#ffffff';
-            hourCell.style.fontSize = '8px';
-            hourCell.style.textAlign = 'center';
-            hourCell.style.color = '#999';
-            hourCell.style.paddingTop = '2px';
-            hourCell.textContent = `${hour}`;
-            
-            hourContainer.appendChild(hourCell);
-        }
-        
-        hourHeader.appendChild(hourContainer);
+        weekCell.textContent = `第${weekIndex + 1}週 (${weekStartDate.getMonth() + 1}/${weekStartDate.getDate()})`;
+        timeline.appendChild(weekCell);
     }
     
-    // 最後の月のヘッダーを完成させる
-    if (monthSpan > 0 && monthHeader.lastChild) {
-        monthHeader.lastChild.style.width = `${monthSpan * dayWidth}px`;
-    }
-    
-    timeline.appendChild(monthHeader);
-    timeline.appendChild(dayHeader);
-    timeline.appendChild(hourHeader);
     
     headerContainer.appendChild(timeline);
     header.appendChild(headerContainer);
@@ -1683,104 +1576,130 @@ function createPageRowCalendar(pageGroup, totalDays, hourWidth) {
             return;
         }
         
-        const worker = projectData.workers.find(w => w.id === task.assignedTo);
-        const workerColor = worker ? getWorkerColor(worker.id) : '#ccc';
+        // シミュレーション中の場合
+        const taskWidth = Math.max(task.duration * hourWidth, 80);
+        let taskBar = null;
         
-        // タスクの開始時間と期間を計算（順次実行）
-        let taskStartHour = 0;
-        let taskDurationHours = 0;
-        
-        // 同じページ内の前のタスクの終了時間を計算（順次実行）
-        let cumulativePosition = 0;
-        const currentTaskIndex = pageGroup.tasks.indexOf(task);
-        
-        for (let i = 0; i < currentTaskIndex; i++) {
-            const prevTask = pageGroup.tasks[i];
-            cumulativePosition += prevTask.duration;
+        // 待機中のタスクを薄い色で表示
+        if (task.simulationStatus === 'waiting') {
+            taskBar = document.createElement('div');
+            taskBar.className = 'task-bar waiting';
+            taskBar.style.cssText = `
+                position: absolute;
+                left: ${currentPosition}px;
+                width: ${taskWidth}px;
+                height: 35px;
+                background: rgba(200,200,200,0.3);
+                border: 2px dashed rgba(150,150,150,0.5);
+                border-radius: 4px;
+                top: 7px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #666;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                padding: 0 8px;
+                opacity: 0.6;
+            `;
+            taskBar.textContent = `${task.name} (${task.duration}h)`;
+            taskBar.title = `${task.name}\nタイプ: ${getTaskTypeLabel(task.type)}\n状態: 待機中`;
+            barContainer.appendChild(taskBar);
+            
+            // 次のタスクの位置を更新
+            currentPosition += taskWidth + 5;
+            return;
         }
         
-        if (task.actualStartHour !== undefined) {
-            taskStartHour = task.actualStartHour;
-        } else if (task.startedAt !== undefined) {
-            taskStartHour = task.startedAt;
-        } else {
-            taskStartHour = cumulativePosition;
+        // 進行中・完了タスクの場合、実際の開始時間を使用
+        if (task.simulationStatus === 'in-progress' || task.simulationStatus === 'completed') {
+            const worker = projectData.workers.find(w => w.id === task.assignedTo);
+            const workerColor = worker ? getWorkerColor(worker.id) : '#ccc';
+            
+            // タスクの開始時間と期間を計算（順次実行）
+            let taskStartHour = 0;
+            let taskDurationHours = 0;
+            
+            // シミュレーション中は実際の開始時間を使用
+            if (task.actualStartHour !== undefined) {
+                taskStartHour = task.actualStartHour;
+            } else if (task.startedAt !== undefined) {
+                taskStartHour = task.startedAt;
+            } else {
+                taskStartHour = currentPosition;
+            }
+            
+            if (task.simulationStatus === 'completed' && task.startedAt !== undefined && task.completedAt !== undefined) {
+                taskDurationHours = task.completedAt - task.startedAt;
+            } else if (task.simulationStatus === 'in-progress' && task.startedAt !== undefined) {
+                const actualWorkedHours = simulationTime - task.startedAt;
+                taskDurationHours = actualWorkedHours;
+            } else {
+                taskDurationHours = task.duration;
+            }
+            
+            const leftPosition = taskStartHour * hourWidth;
+            const width = Math.max(taskDurationHours * hourWidth - 2, 10);
+            
+            taskBar = document.createElement('div');
+            taskBar.className = 'task-bar';
+            taskBar.style.cssText = `
+                position: absolute;
+                left: ${leftPosition}px;
+                width: ${width}px;
+                height: 35px;
+                background: ${workerColor};
+                border-radius: 4px;
+                top: 7px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 12px;
+                font-weight: 600;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+                cursor: pointer;
+                transition: all 0.2s;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                padding: 0 8px;
+            `;
+            
+            // タスクの進捗状況による表示（プログレッシブバー風）
+            if (task.simulationStatus === 'completed') {
+                taskBar.style.opacity = '1';
+                taskBar.style.border = '2px solid #27ae60';
+                taskBar.style.background = `linear-gradient(to right, ${workerColor} 100%, transparent 100%)`;
+            } else if (task.simulationStatus === 'in-progress') {
+                taskBar.style.opacity = '0.9';
+                taskBar.style.border = '2px solid #f39c12';
+                const progress = task.progress || 0;
+                taskBar.style.background = `linear-gradient(to right, ${workerColor} ${progress}%, rgba(200,200,200,0.3) ${progress}%)`;
+            }
+            
+            taskBar.textContent = task.name;
+            taskBar.title = `${task.name}\n担当者: ${worker ? worker.name : '未割当'}\nタイプ: ${getTaskTypeLabel(task.type)}`;
+            
+            barContainer.appendChild(taskBar);
+            
+            // currentPositionを更新（次の待機タスクのため）
+            currentPosition = Math.max(currentPosition, leftPosition + width + 5);
         }
         
-        if (task.simulationStatus === 'completed' && task.startedAt !== undefined && task.completedAt !== undefined) {
-            taskDurationHours = task.completedAt - task.startedAt;
-        } else if (task.simulationStatus === 'in-progress' && task.startedAt !== undefined) {
-            // 進行中のタスクは現在時刻までの実際の作業時間
-            const actualWorkedHours = simulationTime - task.startedAt;
-            taskDurationHours = actualWorkedHours;
-        } else {
-            taskDurationHours = task.duration; // 直接時間として使用
-        }
-        
-        const leftPosition = taskStartHour * hourWidth;
-        const width = Math.max(taskDurationHours * hourWidth - 2, 10); // 最小幅10px
-        
-        const taskBar = document.createElement('div');
-        taskBar.className = 'task-bar';
-        taskBar.style.cssText = `
-            position: absolute;
-            left: ${leftPosition}px;
-            width: ${width}px;
-            height: 35px;
-            background: ${workerColor};
-            border-radius: 4px;
-            top: 7px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 12px;
-            font-weight: 600;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-            cursor: pointer;
-            transition: all 0.2s;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            padding: 0 8px;
-        `;
-        
-        // タスクの進捗状況による表示（プログレッシブバー風）
-        if (task.simulationStatus === 'completed') {
-            taskBar.style.opacity = '1';
-            taskBar.style.border = '2px solid #27ae60';
-            taskBar.style.background = `linear-gradient(to right, ${workerColor} 100%, transparent 100%)`;
-        } else if (task.simulationStatus === 'in-progress') {
-            taskBar.style.opacity = '0.9';
-            taskBar.style.border = '2px solid #f39c12';
-            const progress = task.progress || 0;
-            // 進捗に応じたグラデーション
-            taskBar.style.background = `linear-gradient(to right, ${workerColor} ${progress}%, rgba(200,200,200,0.3) ${progress}%)`;
-        } else {
-            taskBar.style.opacity = '0.3';
-            taskBar.style.background = 'rgba(200,200,200,0.3)';
-        }
-        
-        taskBar.textContent = task.name;
-        taskBar.title = `${task.name}\n担当者: ${worker ? worker.name : '未割当'}\nタイプ: ${getTaskTypeLabel(task.type)}`;
-        
-        // ホバーエフェクト
-        taskBar.addEventListener('mouseenter', function() {
-            this.style.transform = 'scale(1.05)';
-            this.style.zIndex = '10';
-        });
-        
-        taskBar.addEventListener('mouseleave', function() {
-            this.style.transform = 'scale(1)';
-            this.style.zIndex = '1';
-        });
-        
-        barContainer.appendChild(taskBar);
+        // 次のタスクの位置を更新
+        currentPosition += taskWidth + 5;
     });
     
     row.appendChild(barContainer);
     return row;
 }
+
 
 // 次の作業員の色を取得
 function getNextWorkerColor() {
@@ -2191,6 +2110,7 @@ function resetTaskProgress() {
     projectData.workers.forEach(worker => {
         worker.currentTask = null;
         worker.totalWorkedHours = 0;
+        worker.currentLoad = 0;  // 負荷をリセット
     });
     
     updateSimulationDisplay();
@@ -2201,6 +2121,14 @@ function resetTaskProgress() {
 function simulateHour() {
     const currentWeek = Math.floor(simulationTime / 40); // 週40時間で計算
     const currentHour = simulationTime % 40; // 週内の時間
+    
+    // デバッグ: 最初の時間だけログを出力
+    if (simulationTime === 0) {
+        console.log('=== Simulation Start Debug ===');
+        console.log('Workers:', projectData.workers.length);
+        console.log('Pages with tasks:', projectData.pages.filter(p => p.tasks.length > 0).length);
+        console.log('Total tasks:', projectData.pages.reduce((sum, p) => sum + p.tasks.length, 0));
+    }
     
     // ミーティングのチェック（毎週月曜日の9時にミーティング）
     if (currentHour === 0 && currentWeek > 0) { // 週の最初の時間にミーティング
@@ -2214,6 +2142,7 @@ function simulateHour() {
             // 全タスクから作業員のスキルに適合するタスクを探す
             const availableTask = findAvailableTask(worker, currentWeek);
             if (availableTask) {
+                console.log(`Hour ${simulationTime}: ${worker.name} started ${availableTask.name}`);
                 worker.currentTask = availableTask.id; // タスクIDを保存
                 availableTask.simulationStatus = 'in-progress';
                 availableTask.startedAt = simulationTime;
@@ -2221,6 +2150,8 @@ function simulateHour() {
                 availableTask.actualStartWeek = currentWeek;
                 availableTask.actualStartHour = simulationTime;
                 availableTask.assignedTo = worker.id;
+            } else if (simulationTime === 0) {
+                console.log(`Hour ${simulationTime}: No available task for ${worker.name}`);
             }
         }
         
@@ -2244,6 +2175,18 @@ function simulateHour() {
                     task.simulationStatus = 'completed';
                     task.completedAt = simulationTime;
                     worker.currentTask = null;
+                    
+                    // 完了と同時に次のタスクを探して即座に開始
+                    const nextTask = findAvailableTask(worker, currentWeek);
+                    if (nextTask) {
+                        worker.currentTask = nextTask.id;
+                        nextTask.simulationStatus = 'in-progress';
+                        nextTask.startedAt = simulationTime;
+                        nextTask.progress = 0;
+                        nextTask.actualStartWeek = currentWeek;
+                        nextTask.actualStartHour = simulationTime;
+                        nextTask.assignedTo = worker.id;
+                    }
                 }
             } else {
                 // タスクが見つからない場合はクリア
@@ -2276,6 +2219,14 @@ function findAvailableTask(worker, currentWeek) {
     projectData.customTasks.forEach(task => allTasks.push(task));
     projectData.meetings.forEach(meeting => allTasks.push(meeting));
     
+    // デバッグ: 最初の呼び出し時にタスク状況を出力
+    if (currentWeek === 0 && simulationTime === 0) {
+        console.log(`Checking tasks for ${worker.name}:`, {
+            totalTasks: allTasks.length,
+            workerSkills: worker.skills
+        });
+    }
+    
     // 利用可能なタスクをフィルタリング
     const availableTasks = allTasks.filter(task => {
         // 既に完了または進行中のタスクは除外
@@ -2293,11 +2244,17 @@ function findAvailableTask(worker, currentWeek) {
         const requiredSkill = getSkillForTaskType(task.type);
         const skillLevel = worker.skills[requiredSkill] || 0;
         if (skillLevel <= 0) {
+            if (currentWeek === 0 && simulationTime === 0) {
+                console.log(`  ${task.name} (${task.type}): No skill (${requiredSkill} = ${skillLevel})`);
+            }
             return false;
         }
         
         // 依存関係をチェック
         if (!canStartTask(task)) {
+            if (currentWeek === 0 && simulationTime === 0) {
+                console.log(`  ${task.name} (${task.type}): Dependencies not met`);
+            }
             return false;
         }
         
@@ -2309,22 +2266,68 @@ function findAvailableTask(worker, currentWeek) {
         return null;
     }
     
-    // タスクの優先度を決定（ページ内の順序を考慮）
-    return availableTasks.reduce((best, current) => {
-        // 1. まず、ページ内の順序を比較
-        const bestPageIndex = getTaskIndexInPage(best);
-        const currentPageIndex = getTaskIndexInPage(current);
+    // タスクを選択する際は、進行中のページを優先的に完了させる
+    const sortedTasks = availableTasks.sort((a, b) => {
+        // 1. 進行中のページ（一部のタスクが開始済み）を最優先
+        const aPageHasStarted = hasPageStarted(a.pageId);
+        const bPageHasStarted = hasPageStarted(b.pageId);
         
-        if (bestPageIndex !== currentPageIndex) {
-            // より早い順序のタスクを優先
-            return currentPageIndex < bestPageIndex ? current : best;
+        if (aPageHasStarted !== bPageHasStarted) {
+            return aPageHasStarted ? -1 : 1;
         }
         
-        // 2. 同じ順序の場合は、スキルレベルで比較
-        const bestSkill = worker.skills[getSkillForTaskType(best.type)] || 0;
-        const currentSkill = worker.skills[getSkillForTaskType(current.type)] || 0;
-        return currentSkill > bestSkill ? current : best;
+        // 2. ページの順序で比較（上から下へ）
+        const aPageOrder = getPageOrder(a);
+        const bPageOrder = getPageOrder(b);
+        
+        if (aPageOrder !== bPageOrder) {
+            return aPageOrder - bPageOrder;
+        }
+        
+        // 3. 同じページ内では、タスクの順序で比較
+        const aPageIndex = getTaskIndexInPage(a);
+        const bPageIndex = getTaskIndexInPage(b);
+        
+        if (aPageIndex !== bPageIndex) {
+            return aPageIndex - bPageIndex;
+        }
+        
+        // 4. 同じタスクの場合、作業員の適性で比較
+        const aSkill = worker.skills[getSkillForTaskType(a.type)] || 0;
+        const bSkill = worker.skills[getSkillForTaskType(b.type)] || 0;
+        
+        return bSkill - aSkill;
     });
+    
+    return sortedTasks.length > 0 ? sortedTasks[0] : null;
+}
+
+// ページの順序を取得（上から下へ）
+function getPageOrder(task) {
+    if (!task.pageId) {
+        return 999; // ページタスクでない場合は最後に処理
+    }
+    
+    const pageIndex = projectData.pages.findIndex(p => p.id === task.pageId);
+    return pageIndex >= 0 ? pageIndex : 999;
+}
+
+// ページが既に開始されているかチェック
+function hasPageStarted(pageId) {
+    if (!pageId) {
+        return false;
+    }
+    
+    const page = projectData.pages.find(p => p.id === pageId);
+    if (!page) {
+        return false;
+    }
+    
+    // ページ内のいずれかのタスクが開始済みまたは完了済みなら true
+    return page.tasks.some(task => 
+        task.simulationStatus === 'in-progress' || 
+        task.simulationStatus === 'completed'
+    );
 }
 
 // ページ内でのタスクの順序を取得
@@ -2343,36 +2346,48 @@ function getTaskIndexInPage(task) {
 
 // タスクが開始可能かチェック
 function canStartTask(task) {
-    // ページ内のタスクは順次実行する必要がある
+    // ワイヤーフレーム、PCデザイン、SPデザインは並列実行可能
+    // クライアント確認はデザイン完了後
+    // コーディングはデザイン完了後
+    // 動作確認はコーディング完了後
+    
     if (task.pageId) {
         const page = projectData.pages.find(p => p.id === task.pageId);
         if (page && page.tasks.length > 0) {
-            // 現在のタスクのインデックスを取得
-            const currentTaskIndex = page.tasks.findIndex(t => t.id === task.id);
-            if (currentTaskIndex > 0) {
-                // 前のタスクが完了しているかチェック
-                const previousTask = page.tasks[currentTaskIndex - 1];
-                if (previousTask.simulationStatus !== 'completed') {
-                    return false;
-                }
+            // ワイヤーフレーム作成、PCデザイン、SPデザインは並列実行可能
+            if (task.name === 'ワイヤーフレーム作成' || task.name === 'PCデザイン' || task.name === 'SPデザイン') {
+                return true;
+            }
+            
+            // クライアント確認はデザイン完了後
+            if (task.name === 'クライアント確認') {
+                const designTasks = page.tasks.filter(t => 
+                    (t.name === 'PCデザイン' || t.name === 'SPデザイン') &&
+                    t.simulationStatus !== 'completed'
+                );
+                return designTasks.length === 0;
+            }
+            
+            // コーディングはクライアント確認完了後
+            if (task.name === 'コーディング') {
+                const clientTask = page.tasks.find(t => 
+                    t.name === 'クライアント確認' &&
+                    t.simulationStatus !== 'completed'
+                );
+                return !clientTask;
+            }
+            
+            // 動作確認はコーディング完了後
+            if (task.name === '動作確認') {
+                const codingTask = page.tasks.find(t => 
+                    t.name === 'コーディング' &&
+                    t.simulationStatus !== 'completed'
+                );
+                return !codingTask;
             }
         }
     }
     
-    // 従来のコーディングタスクの依存関係チェック（念のため残す）
-    if (task.type === 'coding' || task.name.includes('コーディング')) {
-        const pageId = task.pageId;
-        const page = projectData.pages.find(p => p.id === pageId);
-        if (page) {
-            const designTasks = page.tasks.filter(t => 
-                (t.type === 'pc-design' || t.type === 'sp-design') &&
-                t.simulationStatus !== 'completed'
-            );
-            if (designTasks.length > 0) {
-                return false;
-            }
-        }
-    }
     return true;
 }
 
